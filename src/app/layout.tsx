@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -33,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="zh-TW" className="dark" style={{ colorScheme: 'dark' }}>
       <body className={cn(inter.className, "min-h-screen selection:bg-indigo-500/30")}>
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
