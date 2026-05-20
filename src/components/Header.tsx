@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutGrid, Heart, Plus, Loader2, Database } from 'lucide-react';
+import { LayoutGrid, Heart, Plus, Loader2, Database, Calendar, Clock } from 'lucide-react';
 import { FilterBar } from './FilterBar';
 import { SearchInput } from './SearchInput';
 import { ThemeToggle } from './ThemeToggle';
@@ -28,6 +28,8 @@ interface HeaderProps {
   totalCount: number;
   onOpenImportExport: () => void;
   searchInputRef?: React.Ref<HTMLInputElement>;
+  sortBy: 'added' | 'release';
+  onToggleSort: () => void;
 }
 
 export function Header(props: HeaderProps) {
@@ -40,6 +42,7 @@ export function Header(props: HeaderProps) {
     onAddMovie, isAdding, totalCount,
     onOpenImportExport,
     searchInputRef,
+    sortBy, onToggleSort,
   } = props;
 
   return (
@@ -78,6 +81,21 @@ export function Header(props: HeaderProps) {
               >
                 {isAdding ? <Loader2 className="h-4 w-4 animate-spin text-indigo-400" /> : <Plus className="h-4 w-4 group-hover:scale-110 transition-transform text-indigo-400" />}
                 <span className="text-xs font-bold tracking-wide">新增收藏</span>
+              </button>
+              <button
+                onClick={onToggleSort}
+                className="flex items-center gap-2 rounded-full glass border border-white/5 px-4 py-2.5 text-white/60 hover:text-white hover:border-white/20 transition-all duration-200"
+                aria-label="切換排序"
+                title={sortBy === 'added' ? '目前：最新加入' : '目前：最新發布'}
+              >
+                {sortBy === 'added' ? (
+                  <Clock className="h-4 w-4 text-indigo-400" />
+                ) : (
+                  <Calendar className="h-4 w-4 text-rose-400" />
+                )}
+                <span className="text-xs font-bold tracking-wide">
+                  {sortBy === 'added' ? '最新加入' : '最新發布'}
+                </span>
               </button>
               <button
                 onClick={onOpenImportExport}

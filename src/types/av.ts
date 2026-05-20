@@ -5,6 +5,7 @@ export interface Movie {
   imageUrl: string;
   source: string;
   category: string;
+  releaseDate?: string | null; // ISO YYYY-MM-DD
   maker: string;
   themes: string[];
   actress?: string | null;

@@ -111,6 +111,7 @@ export function MovieDetailModal({ movie, onClose }: Props) {
                 <Field label="來源" value={movie.source} />
                 <Field label="廠商" value={movie.maker || '—'} />
                 <Field label="分類" value={movie.category} />
+                <Field label="發行日" value={movie.releaseDate ?? '—'} />
                 {movie.actress ? (
                   <Link
                     href={`/actress/${encodeURIComponent(movie.actress)}`}

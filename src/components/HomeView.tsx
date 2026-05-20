@@ -26,6 +26,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   const [activeMaker, setActiveMaker] = useState('全部');
   const [activeTheme, setActiveTheme] = useState('全部');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<'added' | 'release'>('added');
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [importExportOpen, setImportExportOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -66,7 +67,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   }, [movies]);
 
   const filtered = useMemo(() => {
-    return movies.filter((m) => {
+    const result = movies.filter((m) => {
       const q = searchQuery.toLowerCase();
       const matchesSearch =
         m.title.toLowerCase().includes(q) ||
@@ -82,9 +83,20 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         matchesMaker && matchesTheme && matchesFav
       );
     });
+
+    if (sortBy === 'release') {
+      // 有 releaseDate 的排前面（DESC），無的排最後
+      return [...result].sort((a, b) => {
+        if (!a.releaseDate && !b.releaseDate) return 0;
+        if (!a.releaseDate) return 1;
+        if (!b.releaseDate) return -1;
+        return b.releaseDate.localeCompare(a.releaseDate);
+      });
+    }
+    return result; // 'added' = DB 預設順序 (created_at DESC)
   }, [
     movies, searchQuery, activeSource, activeCategory,
-    activeMaker, activeTheme, showFavoritesOnly, isFavorite,
+    activeMaker, activeTheme, showFavoritesOnly, isFavorite, sortBy,
   ]);
 
   const handleSubmitAdd = async (url: string) => {
@@ -115,6 +127,8 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         totalCount={filtered.length}
         onOpenImportExport={() => setImportExportOpen(true)}
         searchInputRef={searchInputRef}
+        sortBy={sortBy}
+        onToggleSort={() => setSortBy((v) => (v === 'added' ? 'release' : 'added'))}
       />
       <div className="mx-auto max-w-[1920px] px-4 py-8 sm:px-6 lg:px-8">
         <MovieGrid

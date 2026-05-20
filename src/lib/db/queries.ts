@@ -2,6 +2,7 @@ import { desc, eq } from 'drizzle-orm';
 import { db } from './client';
 import { movies, favorites, type MovieInsert } from './schema';
 import { extractMaker, extractThemes, extractActress } from '@/lib/metadata';
+import { getConfig } from '@/lib/config';
 import type { Movie } from '@/types/av';
 
 const enrich = (row: typeof movies.$inferSelect): Movie => ({
@@ -11,17 +12,23 @@ const enrich = (row: typeof movies.$inferSelect): Movie => ({
   imageUrl: row.imageUrl,
   source: row.source,
   category: row.category,
+  releaseDate: row.releaseDate ?? null,
   maker: extractMaker(row.code),
   themes: extractThemes(row.title),
   actress: extractActress(row.title),
 });
 
 export const listMovies = async (): Promise<Movie[]> => {
-  const rows = await db.select().from(movies).orderBy(desc(movies.createdAt));
+  await getConfig();
+  const rows = await db
+    .select()
+    .from(movies)
+    .orderBy(desc(movies.createdAt));
   return rows.map(enrich);
 };
 
 export const insertMovie = async (data: MovieInsert): Promise<Movie | null> => {
+  await getConfig();
   const exists = await db
     .select()
     .from(movies)

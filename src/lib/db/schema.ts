@@ -8,6 +8,7 @@ export const movies = sqliteTable('movies', {
   imageUrl: text('image_url').notNull(),
   source: text('source').notNull(),
   category: text('category').notNull(),
+  releaseDate: text('release_date'), // ISO YYYY-MM-DD，可為 null
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
@@ -20,6 +21,25 @@ export const favorites = sqliteTable('favorites', {
     .default(sql`(unixepoch())`),
 });
 
+/**
+ * 兩專案 (AvCollect + AvBatch) 共用的動態設定。
+ * value 為 JSON 字串。已知 key:
+ *   - tracked_tags: string[]          → 主題追蹤白名單
+ *   - maker_map: Record<string,string>→ 番號 prefix → 廠商名
+ *   - preferred_actresses: string[]   → AvBatch 追蹤女優
+ *   - preferred_issuers: string[]     → AvBatch 廠商白名單
+ *   - blocked_actresses: string[]
+ *   - blocked_issuers: string[]
+ */
+export const appConfig = sqliteTable('app_config', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
 export type MovieRow = typeof movies.$inferSelect;
 export type MovieInsert = typeof movies.$inferInsert;
 export type FavoriteRow = typeof favorites.$inferSelect;
+export type AppConfigRow = typeof appConfig.$inferSelect;

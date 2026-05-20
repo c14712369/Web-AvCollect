@@ -91,6 +91,10 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
           {movie.title}
         </h3>
 
+        {movie.releaseDate && (
+          <p className="text-[9px] font-mono text-white/40 -mt-0.5">{movie.releaseDate}</p>
+        )}
+
         {/* Tags Row */}
         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
           <div className="rounded bg-white/10 px-1.5 py-0.5 text-[8px] font-bold tracking-wider text-white/70 border border-white/10 uppercase">
