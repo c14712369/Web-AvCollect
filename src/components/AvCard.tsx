@@ -5,19 +5,18 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ExternalLink, Heart } from 'lucide-react';
 import { Movie } from '@/types/av';
-import { useFavorites } from '@/hooks/useFavorites';
 
 interface AvCardProps {
   movie: Movie;
+  favorited: boolean;
+  onToggleFavorite: (code: string) => void;
+  onSelect: (movie: Movie) => void;
 }
 
-export const AvCard: React.FC<AvCardProps> = ({ movie }) => {
-  const { isFavorite, toggleFavorite } = useFavorites();
-  const favorited = isFavorite(movie.code);
-
+export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavorite, onSelect }) => {
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleFavorite(movie.code);
+    onToggleFavorite(movie.code);
   };
 
   const [imgSrc, setImgSrc] = React.useState(movie.imageUrl.replace('cover-t.jpg', 'cover-n.jpg'));
@@ -25,7 +24,7 @@ export const AvCard: React.FC<AvCardProps> = ({ movie }) => {
   return (
     <div
       className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] cursor-pointer"
-      onClick={() => window.open(movie.url, '_blank')}
+      onClick={() => onSelect(movie)}
     >
       {/* Image Container */}
       <div className="relative aspect-video w-full overflow-hidden bg-zinc-900">

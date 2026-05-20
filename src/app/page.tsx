@@ -21,7 +21,7 @@ export default function Home() {
   const [activeTheme, setActiveTheme] = useState('全部');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
-  const { isFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   React.useEffect(() => {
     fetch('/api/movies')
@@ -177,7 +177,12 @@ export default function Home() {
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <AvCard movie={movie} />
+                  <AvCard
+                    movie={movie}
+                    favorited={isFavorite(movie.code)}
+                    onToggleFavorite={toggleFavorite}
+                    onSelect={(m) => window.open(m.url, '_blank')}
+                  />
                 </motion.div>
               ))}
             </motion.div>
