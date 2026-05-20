@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutGrid, Heart, Plus, Loader2 } from 'lucide-react';
+import { LayoutGrid, Heart, Plus, Loader2, Database } from 'lucide-react';
 import { FilterBar } from './FilterBar';
 import { SearchInput } from './SearchInput';
 import { ThemeToggle } from './ThemeToggle';
@@ -25,6 +25,7 @@ interface HeaderProps {
   onAddMovie: () => void;
   isAdding: boolean;
   totalCount: number;
+  onOpenImportExport: () => void;
 }
 
 export function Header(props: HeaderProps) {
@@ -35,6 +36,7 @@ export function Header(props: HeaderProps) {
     onSourceChange, onCategoryChange, onMakerChange, onThemeChange,
     showFavoritesOnly, onToggleFavoritesOnly,
     onAddMovie, isAdding, totalCount,
+    onOpenImportExport,
   } = props;
 
   return (
@@ -72,6 +74,13 @@ export function Header(props: HeaderProps) {
               >
                 {isAdding ? <Loader2 className="h-4 w-4 animate-spin text-indigo-400" /> : <Plus className="h-4 w-4 group-hover:scale-110 transition-transform text-indigo-400" />}
                 <span className="text-xs font-bold tracking-wide">新增收藏</span>
+              </button>
+              <button
+                onClick={onOpenImportExport}
+                className="rounded-full glass border border-white/5 p-2.5 text-white/50 hover:text-white hover:border-white/20 transition-all duration-200"
+                aria-label="收藏匯入匯出"
+              >
+                <Database className="h-4 w-4" />
               </button>
               <button
                 onClick={onToggleFavoritesOnly}

@@ -5,6 +5,7 @@ import type { Movie } from '@/types/av';
 import { Header } from './Header';
 import { MovieGrid } from './MovieGrid';
 import { MovieDetailModal } from './MovieDetailModal';
+import { ImportExportDialog } from './ImportExportDialog';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAddMovie, useMovies } from '@/hooks/useMovies';
 
@@ -24,6 +25,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   const [activeTheme, setActiveTheme] = useState('全部');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  const [importExportOpen, setImportExportOpen] = useState(false);
 
   const sources = useMemo(
     () => ['全部', ...Array.from(new Set(movies.map((m) => m.source)))],
@@ -97,6 +99,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         onAddMovie={handleAddMovie}
         isAdding={addMovie.isPending}
         totalCount={filtered.length}
+        onOpenImportExport={() => setImportExportOpen(true)}
       />
       <div className="mx-auto max-w-[1920px] px-4 py-8 sm:px-6 lg:px-8">
         <MovieGrid
@@ -109,6 +112,10 @@ export function HomeView({ initialMovies }: HomeViewProps) {
       <MovieDetailModal
         movie={selectedMovie}
         onClose={() => setSelectedMovie(null)}
+      />
+      <ImportExportDialog
+        open={importExportOpen}
+        onClose={() => setImportExportOpen(false)}
       />
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
         <div className="absolute top-0 -left-1/4 h-[500px] w-[500px] rounded-full bg-indigo-500/5 blur-[120px]" />
