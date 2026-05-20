@@ -9,23 +9,32 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.3",
+    "@t3-oss/env-nextjs": "^0.13.11",
     "@tailwindcss/postcss": "^4.0.0-alpha.31",
+    "@tanstack/react-query": "^5.100.11",
+    "@tanstack/react-virtual": "^3.13.24",
     "cheerio": "^1.2.0",
     "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.2",
     "framer-motion": "^11.13.1",
     "lucide-react": "^0.468.0",
     "next": "15.1.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "tailwind-merge": "^2.5.5"
+    "tailwind-merge": "^2.5.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.1",
     "autoprefixer": "^10.4.20",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
     "postcss": "^8.4.49",
     "tailwindcss": "4.0.0-alpha.31",
+    "tsx": "^4.22.3",
     "typescript": "^5.7.2"
   }
 }
