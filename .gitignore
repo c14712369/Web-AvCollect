@@ -39,5 +39,3 @@ local.db
 local.db-journal
 *.db
 
-# drizzle
-/drizzle/meta/
