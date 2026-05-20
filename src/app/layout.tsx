@@ -1,14 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { cn } from "@/lib/utils";
 
 const inter = Inter({ subsets: ["latin"] });
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 export const metadata: Metadata = {
   title: "AvCollect | 頂級數位資產典藏庫",
