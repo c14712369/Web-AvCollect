@@ -53,7 +53,10 @@ export function HomeView({ initialMovies }: HomeViewProps) {
     [movies]
   );
   const makers = useMemo(
-    () => ['全部', ...Array.from(new Set(movies.map((m) => m.maker))).sort()],
+    () => [
+      '全部',
+      ...Array.from(new Set(movies.map((m) => m.maker).filter(Boolean))).sort(),
+    ],
     [movies]
   );
   const themes = useMemo(() => {

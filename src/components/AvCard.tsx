@@ -5,20 +5,13 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ExternalLink, Heart, ImageOff } from 'lucide-react';
 import { Movie } from '@/types/av';
+import { upgradeImageUrl } from '@/lib/utils';
 
 interface AvCardProps {
   movie: Movie;
   favorited: boolean;
   onToggleFavorite: (code: string) => void;
   onSelect: (movie: Movie) => void;
-}
-
-function upgradeImageUrl(url: string, source: string): string {
-  if (!url) return url;
-  if (source === 'Jable') {
-    return url.replace(/\/320x180\/(\d+)\.jpg$/, '/preview.jpg');
-  }
-  return url.replace('cover-t.jpg', 'cover-n.jpg');
 }
 
 export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavorite, onSelect }) => {
@@ -103,9 +96,11 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
           <div className="rounded bg-white/10 px-1.5 py-0.5 text-[8px] font-bold tracking-wider text-white/70 border border-white/10 uppercase">
             {movie.source}
           </div>
-          <div className="rounded bg-indigo-500/30 px-1.5 py-0.5 text-[8px] font-bold tracking-wider text-indigo-200 border border-indigo-500/30 uppercase">
-            {movie.maker}
-          </div>
+          {movie.maker && (
+            <div className="rounded bg-indigo-500/30 px-1.5 py-0.5 text-[8px] font-bold tracking-wider text-indigo-200 border border-indigo-500/30 uppercase">
+              {movie.maker}
+            </div>
+          )}
           <div className="rounded bg-rose-500/20 px-1.5 py-0.5 text-[8px] font-bold tracking-wider text-rose-300 border border-rose-500/20 truncate max-w-[80px]">
             {movie.category === 'ActressMatched' ? '追蹤女優' :
              movie.category === 'TagMatched' ? '追蹤標籤' :
@@ -115,17 +110,16 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
           </div>
         </div>
 
-        {/* Themes */}
-        <div className="mt-auto pt-1 flex flex-wrap gap-1">
-          {movie.themes.slice(0, 3).map(theme => (
-            <span key={theme} className="text-[9px] font-medium text-white/40 bg-white/5 border border-white/5 rounded px-1.5 py-0.5">
-              #{theme}
-            </span>
-          ))}
-          {movie.themes.length === 0 && (
-             <span className="text-[9px] font-medium text-white/20 px-1.5 py-0.5">無特定主題</span>
-          )}
-        </div>
+        {/* Themes (僅追蹤標籤) */}
+        {movie.themes.length > 0 && (
+          <div className="mt-auto pt-1 flex flex-wrap gap-1">
+            {movie.themes.slice(0, 3).map(theme => (
+              <span key={theme} className="text-[9px] font-medium text-white/40 bg-white/5 border border-white/5 rounded px-1.5 py-0.5">
+                #{theme}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

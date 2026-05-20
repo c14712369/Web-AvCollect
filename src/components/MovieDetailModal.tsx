@@ -1,12 +1,13 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ExternalLink, Heart, ArrowRight } from 'lucide-react';
+import { X, ExternalLink, Heart, ArrowRight, ImageOff } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { Movie } from '@/types/av';
 import { useFavorites } from '@/hooks/useFavorites';
+import { upgradeImageUrl } from '@/lib/utils';
 
 interface Props {
   movie: Movie | null;
@@ -15,6 +16,27 @@ interface Props {
 
 export function MovieDetailModal({ movie, onClose }: Props) {
   const { isFavorite, toggleFavorite } = useFavorites();
+  const initialUrl = movie ? upgradeImageUrl(movie.imageUrl, movie.source) : '';
+  const [imgSrc, setImgSrc] = useState(initialUrl);
+  const [imgError, setImgError] = useState(false);
+  const [retried, setRetried] = useState(false);
+
+  useEffect(() => {
+    if (movie) {
+      setImgSrc(upgradeImageUrl(movie.imageUrl, movie.source));
+      setImgError(!movie.imageUrl);
+      setRetried(false);
+    }
+  }, [movie]);
+
+  const handleImgError = () => {
+    if (!retried && movie && imgSrc !== movie.imageUrl && movie.imageUrl) {
+      setRetried(true);
+      setImgSrc(movie.imageUrl);
+    } else {
+      setImgError(true);
+    }
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -48,17 +70,27 @@ export function MovieDetailModal({ movie, onClose }: Props) {
             >
               <X className="h-4 w-4" />
             </button>
-            <div className="relative aspect-video w-full bg-zinc-900">
-              <Image
-                src={movie.imageUrl}
-                alt={movie.title}
-                fill
-                unoptimized
-                referrerPolicy="no-referrer"
-                className="object-cover"
-                sizes="100vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
+            <div className="relative aspect-[16/10] w-full bg-zinc-900">
+              {imgError ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-indigo-900/40 via-zinc-900 to-violet-900/30 p-8">
+                  <ImageOff className="h-10 w-10 text-white/20 mb-4" />
+                  <div className="text-sm font-mono font-bold text-indigo-300/70 tracking-wider">
+                    {movie.code}
+                  </div>
+                </div>
+              ) : (
+                <Image
+                  src={imgSrc}
+                  alt={movie.title}
+                  fill
+                  unoptimized
+                  referrerPolicy="no-referrer"
+                  onError={handleImgError}
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 672px"
+                />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent pointer-events-none" />
             </div>
             <div className="p-6 space-y-4">
               <div className="flex items-start justify-between gap-3">
@@ -77,7 +109,7 @@ export function MovieDetailModal({ movie, onClose }: Props) {
               <h2 className="text-lg font-bold leading-snug text-white">{movie.title}</h2>
               <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                 <Field label="來源" value={movie.source} />
-                <Field label="廠商" value={movie.maker} />
+                <Field label="廠商" value={movie.maker || '—'} />
                 <Field label="分類" value={movie.category} />
                 {movie.actress ? (
                   <Link
