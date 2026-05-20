@@ -26,6 +26,7 @@ interface HeaderProps {
   isAdding: boolean;
   totalCount: number;
   onOpenImportExport: () => void;
+  searchInputRef?: React.Ref<HTMLInputElement>;
 }
 
 export function Header(props: HeaderProps) {
@@ -37,6 +38,7 @@ export function Header(props: HeaderProps) {
     showFavoritesOnly, onToggleFavoritesOnly,
     onAddMovie, isAdding, totalCount,
     onOpenImportExport,
+    searchInputRef,
   } = props;
 
   return (
@@ -54,7 +56,7 @@ export function Header(props: HeaderProps) {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <SearchInput value={searchQuery} onChange={onSearchChange} />
+              <SearchInput value={searchQuery} onChange={onSearchChange} inputRef={searchInputRef} />
               <ThemeToggle />
             </div>
           </div>

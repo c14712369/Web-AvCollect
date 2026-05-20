@@ -7,12 +7,14 @@ interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  inputRef?: React.Ref<HTMLInputElement>;
 }
 
-export const SearchInput: React.FC<SearchInputProps> = ({ 
-  value, 
-  onChange, 
-  placeholder = "搜尋番號、標題或演員..." 
+export const SearchInput: React.FC<SearchInputProps> = ({
+  value,
+  onChange,
+  placeholder = '搜尋番號、標題或演員...',
+  inputRef,
 }) => {
   return (
     <div className="relative group w-full max-w-2xl">
@@ -20,6 +22,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         <Search className="h-5 w-5 text-white/20 transition-colors group-focus-within:text-indigo-400" />
       </div>
       <input
+        ref={inputRef}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { Movie } from '@/types/av';
 import { Header } from './Header';
 import { MovieGrid } from './MovieGrid';
@@ -8,6 +8,7 @@ import { MovieDetailModal } from './MovieDetailModal';
 import { ImportExportDialog } from './ImportExportDialog';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAddMovie, useMovies } from '@/hooks/useMovies';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 interface HomeViewProps {
   initialMovies: Movie[];
@@ -26,6 +27,20 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [importExportOpen, setImportExportOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useKeyboardShortcuts([
+    {
+      key: 'k',
+      ctrl: true,
+      meta: true,
+      handler: () => searchInputRef.current?.focus(),
+    },
+    {
+      key: 'f',
+      handler: () => setShowFavoritesOnly((v) => !v),
+    },
+  ]);
 
   const sources = useMemo(
     () => ['全部', ...Array.from(new Set(movies.map((m) => m.source)))],
@@ -100,6 +115,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         isAdding={addMovie.isPending}
         totalCount={filtered.length}
         onOpenImportExport={() => setImportExportOpen(true)}
+        searchInputRef={searchInputRef}
       />
       <div className="mx-auto max-w-[1920px] px-4 py-8 sm:px-6 lg:px-8">
         <MovieGrid
