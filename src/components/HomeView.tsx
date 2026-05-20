@@ -6,6 +6,7 @@ import { Header } from './Header';
 import { MovieGrid } from './MovieGrid';
 import { MovieDetailModal } from './MovieDetailModal';
 import { ImportExportDialog } from './ImportExportDialog';
+import { AddMovieDialog } from './AddMovieDialog';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAddMovie, useMovies } from '@/hooks/useMovies';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -27,6 +28,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [importExportOpen, setImportExportOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useKeyboardShortcuts([
@@ -82,14 +84,8 @@ export function HomeView({ initialMovies }: HomeViewProps) {
     activeMaker, activeTheme, showFavoritesOnly, isFavorite,
   ]);
 
-  const handleAddMovie = async () => {
-    const url = window.prompt('請輸入影片網址 (Jable, MissAV, Javrate)：');
-    if (!url) return;
-    try {
-      await addMovie.mutateAsync(url);
-    } catch (e) {
-      window.alert('新增失敗：' + (e as Error).message);
-    }
+  const handleSubmitAdd = async (url: string) => {
+    await addMovie.mutateAsync(url);
   };
 
   return (
@@ -111,7 +107,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         onThemeChange={setActiveTheme}
         showFavoritesOnly={showFavoritesOnly}
         onToggleFavoritesOnly={() => setShowFavoritesOnly((v) => !v)}
-        onAddMovie={handleAddMovie}
+        onAddMovie={() => setAddOpen(true)}
         isAdding={addMovie.isPending}
         totalCount={filtered.length}
         onOpenImportExport={() => setImportExportOpen(true)}
@@ -132,6 +128,12 @@ export function HomeView({ initialMovies }: HomeViewProps) {
       <ImportExportDialog
         open={importExportOpen}
         onClose={() => setImportExportOpen(false)}
+      />
+      <AddMovieDialog
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onSubmit={handleSubmitAdd}
+        isSubmitting={addMovie.isPending}
       />
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
         <div className="absolute top-0 -left-1/4 h-[500px] w-[500px] rounded-full bg-indigo-500/5 blur-[120px]" />
