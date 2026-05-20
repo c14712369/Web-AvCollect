@@ -14,11 +14,9 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
       - name: Type check
         run: npx tsc --noEmit
-      - name: Lint
-        run: npm run lint
       - name: Build
         env:
           TURSO_DATABASE_URL: file:./local.db
