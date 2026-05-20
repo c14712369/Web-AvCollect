@@ -55,7 +55,7 @@ export function MovieGrid({
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 280,
+    estimateSize: () => 420,
     overscan: 4,
   });
 
