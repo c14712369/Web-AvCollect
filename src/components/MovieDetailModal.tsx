@@ -1,8 +1,9 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ExternalLink, Heart } from 'lucide-react';
+import { X, ExternalLink, Heart, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useEffect } from 'react';
 import type { Movie } from '@/types/av';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -78,7 +79,21 @@ export function MovieDetailModal({ movie, onClose }: Props) {
                 <Field label="來源" value={movie.source} />
                 <Field label="廠商" value={movie.maker} />
                 <Field label="分類" value={movie.category} />
-                <Field label="女優" value={movie.actress ?? '—'} />
+                {movie.actress ? (
+                  <Link
+                    href={`/actress/${encodeURIComponent(movie.actress)}`}
+                    onClick={onClose}
+                    className="group flex flex-col rounded-lg -mx-1 px-1 py-0.5 transition-colors hover:bg-white/5"
+                  >
+                    <p className="text-[10px] font-medium uppercase tracking-widest text-white/40">女優</p>
+                    <span className="flex items-center gap-1 mt-0.5 text-sm font-semibold text-rose-300 group-hover:text-rose-200">
+                      {movie.actress}
+                      <ArrowRight className="h-3 w-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                    </span>
+                  </Link>
+                ) : (
+                  <Field label="女優" value="—" />
+                )}
               </div>
               {movie.themes.length > 0 && (
                 <div>
