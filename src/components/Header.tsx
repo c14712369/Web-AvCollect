@@ -3,7 +3,7 @@
 import { LayoutGrid, Heart, Plus, Loader2 } from 'lucide-react';
 import { FilterBar } from './FilterBar';
 import { SearchInput } from './SearchInput';
-// import { ThemeToggle } from './ThemeToggle'; // Task 15 啟用
+import { ThemeToggle } from './ThemeToggle';
 
 interface HeaderProps {
   searchQuery: string;
@@ -53,7 +53,7 @@ export function Header(props: HeaderProps) {
             </div>
             <div className="flex items-center gap-3">
               <SearchInput value={searchQuery} onChange={onSearchChange} />
-              {/* <ThemeToggle /> Task 15 啟用 */}
+              <ThemeToggle />
             </div>
           </div>
 

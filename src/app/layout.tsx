@@ -32,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-TW" className="dark" style={{ colorScheme: 'dark' }}>
+    <html lang="zh-TW" suppressHydrationWarning>
       <body className={cn(inter.className, "min-h-screen selection:bg-indigo-500/30")}>
         <Providers>{children}</Providers>
       </body>

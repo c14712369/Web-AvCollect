@@ -127,3 +127,19 @@
     scrollbar-width: none;
   }
 }
+
+/* Light/Dark Theme CSS Variables */
+:root {
+  --background: 250 250 250;
+  --foreground: 24 24 27;
+}
+
+.dark {
+  --background: 5 5 5;
+  --foreground: 255 255 255;
+}
+
+body {
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+}
