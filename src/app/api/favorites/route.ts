@@ -1,25 +1,34 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
-
-const filePath = path.join(process.cwd(), 'src', 'lib', 'favorites.json');
+import { listFavorites, setFavorites } from '@/lib/db/queries';
+import { favoritesSchema } from '@/lib/validators';
 
 export async function GET() {
   try {
-    const data = await fs.readFile(filePath, 'utf-8');
-    return NextResponse.json(JSON.parse(data));
+    const codes = await listFavorites();
+    return NextResponse.json(codes);
   } catch (error) {
-    return NextResponse.json([]);
+    console.error('[GET /api/favorites]', error);
+    return NextResponse.json([], { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const favorites = await req.json();
-    await fs.writeFile(filePath, JSON.stringify(favorites, null, 2), 'utf-8');
+    const body = await req.json();
+    const parsed = favoritesSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+    await setFavorites(parsed.data);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to save favorites:', error);
-    return NextResponse.json({ success: false, error: String(error) }, { status: 500 });
+    console.error('[POST /api/favorites]', error);
+    return NextResponse.json(
+      { success: false, error: String(error) },
+      { status: 500 }
+    );
   }
 }

@@ -4,14 +4,15 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutGrid, Info, Heart, Plus, Loader2 } from 'lucide-react';
 
-import { movies as initialMovies } from '@/lib/data';
+import type { Movie } from '@/types/av';
+const initialMovies: Movie[] = [];
 import { AvCard } from '@/components/AvCard';
 import { FilterBar } from '@/components/FilterBar';
 import { SearchInput } from '@/components/SearchInput';
 import { useFavorites } from '@/hooks/useFavorites';
 
 export default function Home() {
-  const [movies, setMovies] = useState(initialMovies);
+  const [movies, setMovies] = useState<Movie[]>(initialMovies);
   const [isAdding, setIsAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSource, setActiveSource] = useState('全部');
@@ -21,6 +22,17 @@ export default function Home() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   const { isFavorite } = useFavorites();
+
+  React.useEffect(() => {
+    fetch('/api/movies')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.movies)) {
+          setMovies(data.movies);
+        }
+      })
+      .catch((e) => console.error(e));
+  }, []);
 
   const handleAddMovie = async () => {
     const url = window.prompt('請輸入影片網址 (Jable, MissAV, Javrate)：');
