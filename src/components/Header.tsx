@@ -4,6 +4,7 @@ import { LayoutGrid, Heart, Plus, Loader2, Database } from 'lucide-react';
 import { FilterBar } from './FilterBar';
 import { SearchInput } from './SearchInput';
 import { ThemeToggle } from './ThemeToggle';
+import { LogoutButton } from './LogoutButton';
 
 interface HeaderProps {
   searchQuery: string;
@@ -58,6 +59,7 @@ export function Header(props: HeaderProps) {
             <div className="flex items-center gap-3">
               <SearchInput value={searchQuery} onChange={onSearchChange} inputRef={searchInputRef} />
               <ThemeToggle />
+              <LogoutButton />
             </div>
           </div>
 
