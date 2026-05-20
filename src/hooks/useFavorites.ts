@@ -1,72 +1,65 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 
-// External state to keep all hook instances in sync
-let globalFavorites: string[] = [];
-let isLoaded = false;
-const listeners = new Set<(favs: string[]) => void>();
+const QUERY_KEY = ['favorites'] as const;
 
-const syncToServer = async (next: string[]) => {
-  try {
-    await fetch('/api/favorites', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(next)
-    });
-  } catch (e) {
-    console.error('Failed to sync favorites to server', e);
-  }
+const fetchFavorites = async (): Promise<string[]> => {
+  const res = await fetch('/api/favorites');
+  if (!res.ok) throw new Error('Failed to load favorites');
+  return res.json();
 };
 
-const setGlobalFavorites = (next: string[]) => {
-  globalFavorites = next;
-  listeners.forEach((listener) => listener(next));
-  syncToServer(next);
+const saveFavorites = async (codes: string[]): Promise<void> => {
+  const res = await fetch('/api/favorites', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(codes),
+  });
+  if (!res.ok) throw new Error('Failed to save favorites');
 };
 
 export const useFavorites = () => {
-  const [favorites, setFavorites] = useState<string[]>(globalFavorites);
+  const queryClient = useQueryClient();
+  const { data: favorites = [] } = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: fetchFavorites,
+  });
 
-  useEffect(() => {
-    if (!isLoaded) {
-      isLoaded = true;
-      fetch('/api/favorites')
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            globalFavorites = data;
-            setFavorites(data);
-            listeners.forEach((listener) => listener(data));
-          }
-        })
-        .catch(e => console.error('Failed to load favorites', e));
-    }
+  const mutation = useMutation({
+    mutationFn: saveFavorites,
+    onMutate: async (next) => {
+      await queryClient.cancelQueries({ queryKey: QUERY_KEY });
+      const prev = queryClient.getQueryData<string[]>(QUERY_KEY);
+      queryClient.setQueryData(QUERY_KEY, next);
+      return { prev };
+    },
+    onError: (_err, _next, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(QUERY_KEY, ctx.prev);
+    },
+  });
 
-    const handleChange = (next: string[]) => {
-      setFavorites(next);
-    };
+  const toggleFavorite = useCallback(
+    (code: string) => {
+      const current = queryClient.getQueryData<string[]>(QUERY_KEY) ?? [];
+      const next = current.includes(code)
+        ? current.filter((c) => c !== code)
+        : [...current, code];
+      mutation.mutate(next);
+    },
+    [mutation, queryClient]
+  );
 
-    listeners.add(handleChange);
-    return () => {
-      listeners.delete(handleChange);
-    };
-  }, []);
+  const isFavorite = useCallback(
+    (code: string) => favorites.includes(code),
+    [favorites]
+  );
 
-  const toggleFavorite = useCallback((code: string) => {
-    const next = globalFavorites.includes(code)
-      ? globalFavorites.filter((c) => c !== code)
-      : [...globalFavorites, code];
-    setGlobalFavorites(next);
-  }, []);
+  const replaceFavorites = useCallback(
+    (codes: string[]) => mutation.mutate(codes),
+    [mutation]
+  );
 
-  const isFavorite = useCallback((code: string) => {
-    return favorites.includes(code);
-  }, [favorites]);
-
-  return {
-    favorites,
-    toggleFavorite,
-    isFavorite,
-  };
+  return { favorites, toggleFavorite, isFavorite, replaceFavorites };
 };
