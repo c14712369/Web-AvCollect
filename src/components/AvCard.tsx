@@ -39,8 +39,8 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
       className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] cursor-pointer"
       onClick={() => onSelect(movie)}
     >
-      {/* Image Container - 3:4 portrait ratio fits AV covers properly */}
-      <div className="relative aspect-[3/4] w-full overflow-hidden bg-zinc-900">
+      {/* Image Container - 3:2 landscape ratio；來源縮圖多為橫式(16:9~4:3)，用 contain 完整顯示不裁切 */}
+      <div className="relative aspect-[3/2] w-full overflow-hidden bg-zinc-900">
         {imgError ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-indigo-900/40 via-zinc-900 to-violet-900/30 p-4">
             <ImageOff className="h-6 w-6 text-white/20 mb-2" />
@@ -59,7 +59,7 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
             unoptimized
             referrerPolicy="no-referrer"
             onError={handleImgError}
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className="object-contain transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, (max-width: 1536px) 20vw, 15vw"
           />
         )}

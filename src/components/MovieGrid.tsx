@@ -55,7 +55,9 @@ export function MovieGrid({
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 420,
+    // 初始估值；實際列高交給 measureElement 動態量測，
+    // 故卡片比例/欄數改變時版面都會自動對齊（不再依賴寫死的魔術數字）。
+    estimateSize: () => 300,
     overscan: 4,
   });
 
@@ -88,6 +90,8 @@ export function MovieGrid({
           {virtualizer.getVirtualItems().map((virtualRow) => (
             <div
               key={virtualRow.key}
+              data-index={virtualRow.index}
+              ref={virtualizer.measureElement}
               style={{
                 position: 'absolute',
                 top: 0,
