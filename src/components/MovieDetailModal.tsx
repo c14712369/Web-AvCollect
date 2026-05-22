@@ -149,6 +149,14 @@ export function MovieDetailModal({ movie, onClose }: Props) {
                   </div>
                 </div>
               )}
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-rose-500/10 px-6 py-3 text-sm font-bold text-rose-500 transition hover:bg-rose-500/20 disabled:opacity-50 border border-rose-500/20"
+              >
+                <Trash2 className="h-4 w-4" />
+                {isDeleting ? '\u522A\u9664\u4E2D...' : '\u522A\u9664\u5F71\u7247'}
+              </button>
               <a
                 href={movie.url}
                 target="_blank"
