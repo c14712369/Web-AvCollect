@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
-import { insertMovie, listMovies } from '@/lib/db/queries';
+import { insertMovie, listMovies, deleteMovie } from '@/lib/db/queries';
 import { addMovieSchema } from '@/lib/validators';
 
 export async function GET() {
@@ -87,5 +87,18 @@ export async function POST(req: Request) {
       { success: false, error: String(error) },
       { status: 500 }
     );
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const code = searchParams.get('code');
+    if (!code) return NextResponse.json({ success: false, error: 'Missing code' }, { status: 400 });
+    await deleteMovie(code);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[DELETE /api/movies]', error);
+    return NextResponse.json({ success: false, error: String(error) }, { status: 500 });
   }
 }

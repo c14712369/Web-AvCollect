@@ -13,6 +13,12 @@ const fetchMovies = async (): Promise<Movie[]> => {
   return json.movies;
 };
 
+const deleteMovieApi = async (code: string): Promise<void> => {
+  const res = await fetch(`/api/movies?code=${encodeURIComponent(code)}`, { method: 'DELETE' });
+  const json = await res.json();
+  if (!res.ok || !json.success) throw new Error(json.error ?? 'Failed to delete');
+};
+
 const addMovie = async (url: string): Promise<Movie> => {
   const res = await fetch('/api/movies', {
     method: 'POST',
@@ -35,6 +41,18 @@ export const useAddMovie = () => {
     onSuccess: (movie) => {
       queryClient.setQueryData<Movie[]>(QUERY_KEY, (prev) =>
         prev ? [movie, ...prev] : [movie]
+      );
+    },
+  });
+};
+
+export const useDeleteMovie = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteMovieApi,
+    onSuccess: (_, code) => {
+      queryClient.setQueryData<Movie[]>(QUERY_KEY, (prev) =>
+        prev ? prev.filter((m) => m.code !== code) : []
       );
     },
   });

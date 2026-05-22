@@ -58,3 +58,8 @@ export const setFavorites = async (codes: string[]): Promise<void> => {
       .values(codes.map((code) => ({ code })));
   });
 };
+
+export const deleteMovie = async (code: string): Promise<boolean> => {
+  await db.delete(movies).where(eq(movies.code, code));
+  return true;
+};

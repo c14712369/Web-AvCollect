@@ -1,12 +1,13 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ExternalLink, Heart, ArrowRight, ImageOff } from 'lucide-react';
+import { X, ExternalLink, Heart, ArrowRight, ImageOff, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { Movie } from '@/types/av';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useDeleteMovie } from '@/hooks/useMovies';
 import { upgradeImageUrl } from '@/lib/utils';
 
 interface Props {
@@ -16,6 +17,14 @@ interface Props {
 
 export function MovieDetailModal({ movie, onClose }: Props) {
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { mutate: deleteMovie, isPending: isDeleting } = useDeleteMovie();
+
+  const handleDelete = () => {
+    if (window.confirm('\u78BA\u5B9A\u8981\u522A\u9664\u9019\u90E8\u5F71\u7247\u55CE\uFF1F')) {
+      if (movie) deleteMovie(movie.code, { onSuccess: onClose });
+    }
+  };
+
   const initialUrl = movie ? upgradeImageUrl(movie.imageUrl, movie.source) : '';
   const [imgSrc, setImgSrc] = useState(initialUrl);
   const [imgError, setImgError] = useState(false);
@@ -61,7 +70,7 @@ export function MovieDetailModal({ movie, onClose }: Props) {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
             transition={{ duration: 0.2 }}
-            className="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/95 shadow-2xl"
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-3xl custom-scrollbar border border-white/10 bg-zinc-950/95 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
