@@ -35,14 +35,18 @@ export async function POST(req: Request) {
 
     const res = await fetch(url, {
       headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Referer': url,
       },
     });
     const html = await res.text();
     const $ = cheerio.load(html);
 
-    const title =
+    let title =
       $('meta[property="og:title"]').attr('content') ||
       $('title').text() ||
       'Unknown Title';
@@ -57,11 +61,22 @@ export async function POST(req: Request) {
     }
 
     let code = 'UNKNOWN';
-    const codeMatch =
-      title.match(/[A-Z0-9]+-[0-9A-Z]+/i) ||
-      url.match(/\/([a-zA-Z0-9]+-[0-9A-Z]+)[\/\?]?/);
-    if (codeMatch) {
-      code = codeMatch[1].toUpperCase();
+    // 改良後的 Regex: 支援多個連字號 (如 FC2-PPV-xxxxxx) 且 URL 匹配也支援不分大小寫
+    const codeRegex = /[a-z0-9]+(?:-[a-z0-9]+)+/i;
+    const urlRegex = /\/([a-z0-9]+(?:-[a-z0-9]+)+)[\/\?]?/i;
+
+    const titleMatch = title.match(codeRegex);
+    const urlMatch = url.match(urlRegex);
+
+    if (titleMatch) {
+      code = titleMatch[0].toUpperCase();
+    } else if (urlMatch) {
+      code = urlMatch[1].toUpperCase();
+    }
+
+    // 處理 Cloudflare "Just a moment..." 標題
+    if (title.includes('Just a moment')) {
+      title = code !== 'UNKNOWN' ? code : 'Scrape Failed (Cloudflare)';
     }
 
     const movie = await insertMovie({

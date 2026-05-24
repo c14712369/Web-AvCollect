@@ -54,6 +54,8 @@ const MAKER_MAP: Record<string, string> = {
   MOON: 'Moon Force',
   // MINGOs
   MNGS: 'MINGOs',
+  // FC2
+  FC2: 'FC2 PPV',
 };
 
 const PREFERRED_ISSUERS = [
