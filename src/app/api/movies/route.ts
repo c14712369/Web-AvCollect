@@ -52,14 +52,6 @@ export async function POST(req: Request) {
       'Unknown Title';
     let imageUrl = $('meta[property="og:image"]').attr('content') || '';
 
-    if (!imageUrl) {
-      if (source === 'Jable') {
-        imageUrl = $('.video-img-box img').attr('src') || '';
-      } else if (source === 'MissAV') {
-        imageUrl = $('video').attr('poster') || '';
-      }
-    }
-
     let code = 'UNKNOWN';
     // 改良後的 Regex: 支援多個連字號 (如 FC2-PPV-xxxxxx) 且 URL 匹配也支援不分大小寫
     const codeRegex = /[a-z0-9]+(?:-[a-z0-9]+)+/i;
@@ -74,6 +66,18 @@ export async function POST(req: Request) {
       code = urlMatch[1].toUpperCase();
     }
 
+    if (!imageUrl) {
+      if (source === 'Jable') {
+        imageUrl = $('.video-img-box img').attr('src') || '';
+      } else if (source === 'MissAV') {
+        imageUrl = $('video').attr('poster') || '';
+        // 如果還是沒抓到 (可能是被阻擋)，嘗試猜測 MissAV 的圖片路徑
+        if (!imageUrl && code !== 'UNKNOWN') {
+          imageUrl = `https://sixyik.com/${code.toLowerCase()}/cover-n.jpg`;
+        }
+      }
+    }
+
     // 處理 Cloudflare "Just a moment..." 標題
     if (title.includes('Just a moment')) {
       title = code !== 'UNKNOWN' ? code : 'Scrape Failed (Cloudflare)';
@@ -85,7 +89,7 @@ export async function POST(req: Request) {
       url,
       imageUrl,
       source,
-      category: 'User Added',
+      category: '使用者新增',
     });
 
     if (!movie) {

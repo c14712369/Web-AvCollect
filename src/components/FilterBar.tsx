@@ -17,7 +17,9 @@ const translateOption = (opt: string) => {
     'DailyHot': '日熱門',
     'WeeklyHot': '週熱門',
     'MonthlyHot': '月熱門',
-    'New': '最新'
+    'New': '最新',
+    '使用者新增': '使用者新增',
+    'User Added': '使用者新增'
   };
   return map[opt] || opt;
 };

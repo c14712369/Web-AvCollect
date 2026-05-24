@@ -110,7 +110,9 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
              movie.category === 'TagMatched' ? '追蹤標籤' :
              movie.category === 'DailyHot' ? '日熱門' :
              movie.category === 'WeeklyHot' ? '週熱門' :
-             movie.category === 'New' ? '最新' : movie.category}
+             movie.category === 'New' ? '最新' :
+             movie.category === '使用者新增' || movie.category === 'User Added' ? '使用者新增' :
+             movie.category}
           </div>
         </div>
 
