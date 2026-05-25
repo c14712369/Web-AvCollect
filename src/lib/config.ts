@@ -8,6 +8,7 @@ interface AppConfig {
   preferredActresses: string[];
   blockedIssuers: string[];
   blockedActresses: string[];
+  blockedTags: string[];
 }
 
 const FALLBACK: AppConfig = {
@@ -17,6 +18,7 @@ const FALLBACK: AppConfig = {
   preferredActresses: [],
   blockedIssuers: [],
   blockedActresses: [],
+  blockedTags: [],
 };
 
 const KEY_MAP: Record<string, keyof AppConfig> = {
@@ -26,6 +28,7 @@ const KEY_MAP: Record<string, keyof AppConfig> = {
   preferred_actresses: 'preferredActresses',
   blocked_issuers: 'blockedIssuers',
   blocked_actresses: 'blockedActresses',
+  blocked_tags: 'blockedTags',
 };
 
 let cache: AppConfig | null = null;

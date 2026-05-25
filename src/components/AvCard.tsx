@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { ExternalLink, Heart, ImageOff } from 'lucide-react';
+import { ExternalLink, Heart, ImageOff, Target } from 'lucide-react';
 import { Movie } from '@/types/av';
 import { upgradeImageUrl } from '@/lib/utils';
 
@@ -76,6 +76,21 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
             className={`h-3.5 w-3.5 transition-colors ${favorited ? 'fill-red-500 text-red-500' : 'text-white/70'}`}
           />
         </motion.button>
+
+        {/* 口味契合度徽章（僅 high / medium 顯示，避免雜訊） */}
+        {movie.matchTier && movie.matchTier !== 'low' && movie.matchScore != null && (
+          <div
+            className={`absolute top-2 right-2 z-10 flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[10px] font-black backdrop-blur-md ${
+              movie.matchTier === 'high'
+                ? 'border-violet-400/40 bg-violet-500/30 text-violet-100 shadow-[0_0_12px_rgba(139,92,246,0.45)]'
+                : 'border-teal-400/30 bg-teal-500/25 text-teal-100'
+            }`}
+            title={movie.matchReasons?.length ? `契合：${movie.matchReasons.join('、')}` : '口味契合度'}
+          >
+            <Target className="h-3 w-3" />
+            {movie.matchScore}
+          </div>
+        )}
       </div>
 
       {/* Content Area */}
@@ -107,9 +122,14 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
           )}
           <div className="rounded bg-rose-500/20 px-1.5 py-0.5 text-[8px] font-bold tracking-wider text-rose-300 border border-rose-500/20 truncate max-w-[80px]">
             {movie.category === 'ActressMatched' ? '追蹤女優' :
+             movie.category === 'Recommended' ? '為你推薦' :
+             movie.category === 'MaybeLike' ? '可能喜歡' :
              movie.category === 'TagMatched' ? '追蹤標籤' :
              movie.category === 'DailyHot' ? '日熱門' :
              movie.category === 'WeeklyHot' ? '週熱門' :
+             movie.category === 'MonthlyHot' ? '月熱門' :
+             movie.category === 'HotOffTaste' ? '熱門' :
+             movie.category === 'UncensoredHot' ? '無碼流出' :
              movie.category === 'New' ? '最新' :
              movie.category === '使用者新增' || movie.category === 'User Added' ? '使用者新增' :
              movie.category}

@@ -1,6 +1,7 @@
 'use client';
 
-import { LayoutGrid, Heart, Plus, Loader2, Database, Calendar, Clock } from 'lucide-react';
+import Link from 'next/link';
+import { LayoutGrid, Heart, Plus, Loader2, Database, Calendar, Clock, Target, Sparkles, Settings } from 'lucide-react';
 import { FilterBar } from './FilterBar';
 import { SearchInput } from './SearchInput';
 import { ThemeToggle } from './ThemeToggle';
@@ -23,12 +24,14 @@ interface HeaderProps {
   onThemeChange: (v: string) => void;
   showFavoritesOnly: boolean;
   onToggleFavoritesOnly: () => void;
+  showRecommendedOnly: boolean;
+  onToggleRecommendedOnly: () => void;
   onAddMovie: () => void;
   isAdding: boolean;
   totalCount: number;
   onOpenImportExport: () => void;
   searchInputRef?: React.Ref<HTMLInputElement>;
-  sortBy: 'added' | 'release';
+  sortBy: 'added' | 'release' | 'match';
   onToggleSort: () => void;
 }
 
@@ -39,11 +42,18 @@ export function Header(props: HeaderProps) {
     activeSource, activeCategory, activeMaker, activeTheme,
     onSourceChange, onCategoryChange, onMakerChange, onThemeChange,
     showFavoritesOnly, onToggleFavoritesOnly,
+    showRecommendedOnly, onToggleRecommendedOnly,
     onAddMovie, isAdding, totalCount,
     onOpenImportExport,
     searchInputRef,
     sortBy, onToggleSort,
   } = props;
+
+  const sortMeta = {
+    added: { icon: <Clock className="h-4 w-4 text-indigo-400" />, label: '最新加入' },
+    release: { icon: <Calendar className="h-4 w-4 text-rose-400" />, label: '最新發布' },
+    match: { icon: <Target className="h-4 w-4 text-violet-400" />, label: '依契合度' },
+  }[sortBy];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/5 glass">
@@ -61,6 +71,14 @@ export function Header(props: HeaderProps) {
             </div>
             <div className="flex items-center gap-3">
               <SearchInput value={searchQuery} onChange={onSearchChange} inputRef={searchInputRef} />
+              <Link
+                href="/settings"
+                className="flex h-9 w-9 items-center justify-center rounded-full glass border border-white/5 text-white/50 transition-all duration-200 hover:text-white hover:border-white/20"
+                aria-label="標籤偏好設定"
+                title="標籤偏好設定"
+              >
+                <Settings className="h-4 w-4" />
+              </Link>
               <ThemeToggle />
               <LogoutButton />
             </div>
@@ -86,16 +104,22 @@ export function Header(props: HeaderProps) {
                 onClick={onToggleSort}
                 className="flex items-center gap-2 rounded-full glass border border-white/5 px-4 py-2.5 text-white/60 hover:text-white hover:border-white/20 transition-all duration-200"
                 aria-label="切換排序"
-                title={sortBy === 'added' ? '目前：最新加入' : '目前：最新發布'}
+                title={`目前：${sortMeta.label}`}
               >
-                {sortBy === 'added' ? (
-                  <Clock className="h-4 w-4 text-indigo-400" />
-                ) : (
-                  <Calendar className="h-4 w-4 text-rose-400" />
-                )}
-                <span className="text-xs font-bold tracking-wide">
-                  {sortBy === 'added' ? '最新加入' : '最新發布'}
-                </span>
+                {sortMeta.icon}
+                <span className="text-xs font-bold tracking-wide">{sortMeta.label}</span>
+              </button>
+              <button
+                onClick={onToggleRecommendedOnly}
+                className={`group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border ${
+                  showRecommendedOnly
+                    ? 'bg-violet-500/20 border-violet-500/50 text-violet-300 shadow-[0_0_20px_rgba(139,92,246,0.2)]'
+                    : 'glass border-white/5 text-white/50 hover:text-white hover:border-white/20 hover:bg-white/5'
+                }`}
+                title="只看口味契合度高的影片"
+              >
+                <Sparkles className={`h-4 w-4 transition-all duration-500 ${showRecommendedOnly ? 'scale-110' : 'group-hover:scale-110 group-hover:text-violet-400'}`} />
+                <span className="text-xs font-semibold tracking-wide">為你推薦</span>
               </button>
               <button
                 onClick={onOpenImportExport}

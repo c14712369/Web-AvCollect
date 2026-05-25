@@ -13,10 +13,14 @@ interface FilterBarProps {
 const translateOption = (opt: string) => {
   const map: Record<string, string> = {
     'ActressMatched': '追蹤女優',
+    'Recommended': '為你推薦',
+    'MaybeLike': '可能喜歡',
     'TagMatched': '追蹤標籤',
     'DailyHot': '日熱門',
     'WeeklyHot': '週熱門',
     'MonthlyHot': '月熱門',
+    'HotOffTaste': '熱門(非口味)',
+    'UncensoredHot': '無碼流出',
     'New': '最新',
     '使用者新增': '使用者新增',
     'User Added': '使用者新增'

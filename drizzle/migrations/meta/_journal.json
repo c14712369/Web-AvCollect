@@ -15,6 +15,13 @@
       "when": 1779295425699,
       "tag": "0001_spooky_tattoo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1779722011637,
+      "tag": "0002_awesome_slapstick",
+      "breakpoints": true
     }
   ]
 }

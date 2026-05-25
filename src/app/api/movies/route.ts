@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
 import { insertMovie, listMovies, deleteMovie } from '@/lib/db/queries';
 import { addMovieSchema } from '@/lib/validators';
+import { extractTagsBySource } from '@/lib/scrape/detail-tags';
 
 export async function GET() {
   try {
@@ -83,6 +84,11 @@ export async function POST(req: Request) {
       title = code !== 'UNKNOWN' ? code : 'Scrape Failed (Cloudflare)';
     }
 
+    // 詳情頁順手抽真實內容標籤（頁面已抓，幾乎零成本）
+    let tags: string | null = null;
+    const genres = extractTagsBySource(source, $);
+    if (genres.length > 0) tags = JSON.stringify(genres);
+
     const movie = await insertMovie({
       code,
       title,
@@ -90,6 +96,7 @@ export async function POST(req: Request) {
       imageUrl,
       source,
       category: '使用者新增',
+      tags,
     });
 
     if (!movie) {

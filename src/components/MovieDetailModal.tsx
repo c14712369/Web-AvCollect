@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ExternalLink, Heart, ArrowRight, ImageOff, Trash2 } from 'lucide-react';
+import { X, ExternalLink, Heart, ArrowRight, ImageOff, Trash2, Target } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -116,6 +116,46 @@ export function MovieDetailModal({ movie, onClose }: Props) {
                 </button>
               </div>
               <h2 className="text-lg font-bold leading-snug text-white">{movie.title}</h2>
+
+              {/* 口味契合度 */}
+              {movie.matchScore != null && (
+                <div
+                  className={`flex items-center gap-3 rounded-2xl border p-3 ${
+                    movie.matchTier === 'high'
+                      ? 'border-violet-400/30 bg-violet-500/10'
+                      : movie.matchTier === 'medium'
+                        ? 'border-teal-400/25 bg-teal-500/10'
+                        : 'border-white/10 bg-white/5'
+                  }`}
+                >
+                  <div
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl font-mono text-base font-black ${
+                      movie.matchTier === 'high'
+                        ? 'bg-violet-500/25 text-violet-200'
+                        : movie.matchTier === 'medium'
+                          ? 'bg-teal-500/20 text-teal-200'
+                          : 'bg-white/10 text-white/60'
+                    }`}
+                  >
+                    {movie.matchScore}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1.5 text-sm font-bold text-white/90">
+                      <Target className="h-3.5 w-3.5 text-violet-300" />
+                      口味契合度
+                      <span className="text-white/40 font-medium">
+                        {movie.matchTier === 'high' ? '· 為你推薦' : movie.matchTier === 'medium' ? '· 可能喜歡' : '· 一般'}
+                      </span>
+                    </p>
+                    <p className="mt-0.5 truncate text-sm text-white/50">
+                      {movie.matchReasons && movie.matchReasons.length > 0
+                        ? `命中：${movie.matchReasons.join('、')}`
+                        : '尚無命中你的口味特徵'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                 <Field label="來源" value={movie.source} />
                 <Field label="廠商" value={movie.maker || '—'} />

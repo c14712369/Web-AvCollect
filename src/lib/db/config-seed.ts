@@ -102,6 +102,7 @@ async function main() {
     ['preferred_actresses', PREFERRED_ACTRESSES],
     ['blocked_actresses', []],
     ['blocked_issuers', []],
+    ['blocked_tags', []],
   ];
 
   for (const [key, value] of entries) {

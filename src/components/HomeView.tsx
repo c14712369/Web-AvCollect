@@ -26,7 +26,8 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   const [activeMaker, setActiveMaker] = useState('全部');
   const [activeTheme, setActiveTheme] = useState('全部');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [sortBy, setSortBy] = useState<'added' | 'release'>('added');
+  const [showRecommendedOnly, setShowRecommendedOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<'added' | 'release' | 'match'>('added');
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [importExportOpen, setImportExportOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -42,6 +43,10 @@ export function HomeView({ initialMovies }: HomeViewProps) {
     {
       key: 'f',
       handler: () => setShowFavoritesOnly((v) => !v),
+    },
+    {
+      key: 'r',
+      handler: () => setShowRecommendedOnly((v) => !v),
     },
   ]);
 
@@ -78,9 +83,10 @@ export function HomeView({ initialMovies }: HomeViewProps) {
       const matchesMaker = activeMaker === '全部' || m.maker === activeMaker;
       const matchesTheme = activeTheme === '全部' || m.themes.includes(activeTheme);
       const matchesFav = !showFavoritesOnly || isFavorite(m.code);
+      const matchesRecommended = !showRecommendedOnly || m.matchTier === 'high';
       return (
         matchesSearch && matchesSource && matchesCategory &&
-        matchesMaker && matchesTheme && matchesFav
+        matchesMaker && matchesTheme && matchesFav && matchesRecommended
       );
     });
 
@@ -93,10 +99,14 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         return b.releaseDate.localeCompare(a.releaseDate);
       });
     }
+    if (sortBy === 'match') {
+      // 依口味契合度 DESC，未評分的排最後
+      return [...result].sort((a, b) => (b.matchScore ?? -1) - (a.matchScore ?? -1));
+    }
     return result; // 'added' = DB 預設順序 (created_at DESC)
   }, [
     movies, searchQuery, activeSource, activeCategory,
-    activeMaker, activeTheme, showFavoritesOnly, isFavorite, sortBy,
+    activeMaker, activeTheme, showFavoritesOnly, showRecommendedOnly, isFavorite, sortBy,
   ]);
 
   const handleSubmitAdd = async (url: string) => {
@@ -122,13 +132,17 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         onThemeChange={setActiveTheme}
         showFavoritesOnly={showFavoritesOnly}
         onToggleFavoritesOnly={() => setShowFavoritesOnly((v) => !v)}
+        showRecommendedOnly={showRecommendedOnly}
+        onToggleRecommendedOnly={() => setShowRecommendedOnly((v) => !v)}
         onAddMovie={() => setAddOpen(true)}
         isAdding={addMovie.isPending}
         totalCount={filtered.length}
         onOpenImportExport={() => setImportExportOpen(true)}
         searchInputRef={searchInputRef}
         sortBy={sortBy}
-        onToggleSort={() => setSortBy((v) => (v === 'added' ? 'release' : 'added'))}
+        onToggleSort={() =>
+          setSortBy((v) => (v === 'added' ? 'release' : v === 'release' ? 'match' : 'added'))
+        }
       />
       <div className="mx-auto max-w-[1920px] px-4 py-8 sm:px-6 lg:px-8">
         <MovieGrid

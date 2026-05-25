@@ -9,6 +9,7 @@ export const movies = sqliteTable('movies', {
   source: text('source').notNull(),
   category: text('category').notNull(),
   releaseDate: text('release_date'), // ISO YYYY-MM-DD，可為 null
+  tags: text('tags'), // JSON 字串 string[]（詳情頁抓的真實類型）；尚未 enrich 或非支援來源為 null
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
