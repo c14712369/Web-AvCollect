@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus, X, Tag, Ban, Sparkles, Loader2, Check, Save } from 'lucide-react';
+import { ArrowLeft, Plus, X, Tag, Ban, Sparkles, Loader2, Check, Save, RefreshCw } from 'lucide-react';
 import type { TagSettings } from '@/lib/db/queries';
 import { MakerPrefixManager } from './MakerPrefixManager';
 
@@ -146,6 +146,8 @@ export function SettingsView({ initial }: Props) {
           blockedIssuers={blockedIssuers}
           onChange={persistPrefix}
         />
+
+        <BackfillCard />
       </div>
 
       {/* 儲存列 */}
@@ -175,6 +177,100 @@ export function SettingsView({ initial }: Props) {
         </div>
       </div>
     </main>
+  );
+}
+
+function BackfillCard() {
+  const [latest, setLatest] = useState<{ status: string; conclusion: string | null; createdAt: string; url: string } | null>(null);
+  const [workflowUrl, setWorkflowUrl] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [dispatching, setDispatching] = useState(false);
+  const [dispatchedAt, setDispatchedAt] = useState(0);
+  const [error, setError] = useState('');
+
+  const refresh = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/backfill');
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error ?? '查詢失敗');
+      setLatest(data.latestRun);
+      setWorkflowUrl(data.workflowUrl);
+      setError('');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, []);
+
+  const dispatch = async () => {
+    setDispatching(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/backfill', { method: 'POST' });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error ?? '觸發失敗');
+      setDispatchedAt(Date.now());
+      setTimeout(refresh, 4000);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setDispatching(false);
+    }
+  };
+
+  return (
+    <section className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md">
+      <div className="mb-1 flex items-center gap-2">
+        <RefreshCw className="h-4 w-4 text-emerald-300" />
+        <h2 className="text-base font-semibold">維護工具</h2>
+      </div>
+      <p className="mb-4 text-sm text-white/40">
+        舊片標籤回補：對 tags 為空的舊片從詳情頁補抓真實標籤
+      </p>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={dispatch}
+          disabled={dispatching}
+          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-2 text-sm font-bold text-white shadow-md transition-all hover:shadow-emerald-500/40 active:scale-95 disabled:opacity-40"
+        >
+          {dispatching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          觸發背景補抓
+        </button>
+        {workflowUrl && (
+          <a
+            href={workflowUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-white/60 underline-offset-4 hover:text-white hover:underline"
+          >
+            前往 GHA 查看進度
+          </a>
+        )}
+      </div>
+
+      <div className="mt-3 text-sm">
+        {error && <span className="text-rose-400">{error}</span>}
+        {dispatchedAt > 0 && !error && (
+          <span className="text-emerald-300/80">已觸發 — GHA 約幾秒後出現在列表</span>
+        )}
+        {!error && latest && (
+          <div className="mt-2 text-white/40">
+            最近一次：{new Date(latest.createdAt).toLocaleString('zh-TW')} —{' '}
+            {latest.status === 'completed' ? latest.conclusion ?? 'completed' : latest.status}
+            {' · '}
+            <a href={latest.url} target="_blank" rel="noopener noreferrer" className="underline-offset-4 hover:underline">
+              查看 run
+            </a>
+          </div>
+        )}
+        {!error && !latest && !loading && <span className="text-white/30">尚無 run 紀錄</span>}
+      </div>
+    </section>
   );
 }
 
