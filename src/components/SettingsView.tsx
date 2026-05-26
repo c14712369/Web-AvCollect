@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Plus, X, Tag, Ban, Sparkles, Loader2, Check, Save } from 'lucide-react';
 import type { TagSettings } from '@/lib/db/queries';
+import { MakerPrefixManager } from './MakerPrefixManager';
 
 interface Props {
   initial: TagSettings;
@@ -14,6 +15,8 @@ export function SettingsView({ initial }: Props) {
   const [tracked, setTracked] = useState<string[]>(initial.trackedTags);
   const [blocked, setBlocked] = useState<string[]>(initial.blockedTags);
   const [suggestions, setSuggestions] = useState<string[]>(initial.suggestions);
+  const [makerMap, setMakerMap] = useState<Record<string, string>>(initial.makerMap);
+  const [blockedIssuers, setBlockedIssuers] = useState<string[]>(initial.blockedIssuers);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(0);
   const [error, setError] = useState('');
@@ -33,6 +36,27 @@ export function SettingsView({ initial }: Props) {
   };
   const removeFrom = (list: string[], set: (v: string[]) => void, v: string) =>
     set(list.filter((x) => x !== v));
+
+  const persistPrefix = async (patch: { blockedIssuers?: string[]; makerMap?: Record<string, string> }) => {
+    if (patch.blockedIssuers) setBlockedIssuers(patch.blockedIssuers);
+    if (patch.makerMap) setMakerMap((prev) => ({ ...prev, ...patch.makerMap }));
+    try {
+      const res = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(typeof data.error === 'string' ? data.error : '儲存失敗');
+      setBlockedIssuers(data.blockedIssuers);
+      setMakerMap(data.makerMap);
+      setError('');
+    } catch (e) {
+      setBlockedIssuers(initial.blockedIssuers);
+      setMakerMap(initial.makerMap);
+      setError((e as Error).message);
+    }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -115,6 +139,12 @@ export function SettingsView({ initial }: Props) {
           tags={blocked}
           onAdd={(v) => addTo(blocked, setBlocked, v)}
           onRemove={(v) => removeFrom(blocked, setBlocked, v)}
+        />
+
+        <MakerPrefixManager
+          makerMap={makerMap}
+          blockedIssuers={blockedIssuers}
+          onChange={persistPrefix}
         />
       </div>
 
