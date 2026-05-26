@@ -40,12 +40,20 @@ export interface TasteProfile {
   theme: Record<string, number>;
 }
 
+export interface MatchBreakdown {
+  actress: { hit: string | null; score: number; weight: number };
+  issuer: { hit: string | null; score: number; weight: number };
+  themes: { hits: string[]; score: number };
+}
+
 export interface MatchResult {
   /** 0–100 契合度分數。 */
   score: number;
   tier: MatchTier;
   /** 人類可讀的命中原因（給 App / 推播顯示）。 */
   reasons: string[];
+  /** 完整評分明細（給 App 「為什麼?」彈窗用）。 */
+  breakdown: MatchBreakdown;
 }
 
 /** 評分權重與飽和設定（集中管理，方便上線後微調手感）。 */
@@ -134,20 +142,29 @@ export function buildProfileFromFeatures(
  */
 export function classify(features: MovieFeatures, profile: TasteProfile): MatchResult {
   const reasons: string[] = [];
+  const breakdown: MatchBreakdown = {
+    actress: { hit: null, score: 0, weight: 0 },
+    issuer: { hit: null, score: 0, weight: 0 },
+    themes: { hits: [], score: 0 },
+  };
   let score = 0;
 
   if (features.actress) {
     const w = profile.actress[features.actress] ?? 0;
     if (w > 0) {
-      score += saturate(w) * TASTE_WEIGHTS.actressMax;
+      const s = saturate(w) * TASTE_WEIGHTS.actressMax;
+      score += s;
       reasons.push(`女優 ${features.actress}`);
+      breakdown.actress = { hit: features.actress, score: Math.round(s), weight: w };
     }
   }
 
   const iw = profile.issuer[features.issuer] ?? 0;
   if (iw > 0) {
-    score += saturate(iw) * TASTE_WEIGHTS.issuerMax;
+    const s = saturate(iw) * TASTE_WEIGHTS.issuerMax;
+    score += s;
     reasons.push(`廠商 ${features.issuer}`);
+    breakdown.issuer = { hit: features.issuer, score: Math.round(s), weight: iw };
   }
 
   let themeRaw = 0;
@@ -160,8 +177,10 @@ export function classify(features: MovieFeatures, profile: TasteProfile): MatchR
     }
   }
   if (themeRaw > 0) {
-    score += Math.min(1, themeRaw) * TASTE_WEIGHTS.themeMax;
+    const s = Math.min(1, themeRaw) * TASTE_WEIGHTS.themeMax;
+    score += s;
     reasons.push(`標籤 ${hitTags.join('、')}`);
+    breakdown.themes = { hits: hitTags, score: Math.round(s) };
   }
 
   score = Math.round(Math.max(0, Math.min(100, score)));
@@ -171,7 +190,7 @@ export function classify(features: MovieFeatures, profile: TasteProfile): MatchR
   else if (score >= TASTE_THRESHOLDS.medium) tier = 'medium';
   else tier = 'low';
 
-  return { score, tier, reasons };
+  return { score, tier, reasons, breakdown };
 }
 
 /** 便利判斷：此片是否命中側寫中的任一女優（權重 > 0）。 */

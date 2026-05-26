@@ -136,9 +136,23 @@ export const setConfigArray = async (key: string, value: string[]): Promise<void
     });
 };
 
+/** 寫入（或覆蓋）某個 app_config 物件鍵。 */
+export const setConfigObject = async (key: string, value: Record<string, string>): Promise<void> => {
+  const json = JSON.stringify(value);
+  await db
+    .insert(appConfig)
+    .values({ key, value: json })
+    .onConflictDoUpdate({
+      target: appConfig.key,
+      set: { value: json, updatedAt: new Date() },
+    });
+};
+
 export interface TagSettings {
   trackedTags: string[];
   blockedTags: string[];
+  blockedIssuers: string[];
+  makerMap: Record<string, string>;
   /** 收藏裡常出現、但尚未追蹤/封鎖的標籤（依出現次數排序），供一鍵加入。 */
   suggestions: string[];
 }
@@ -162,5 +176,11 @@ export const getTagSettings = async (): Promise<TagSettings> => {
     .slice(0, 15)
     .map(([t]) => t);
 
-  return { trackedTags: cfg.trackedTags, blockedTags: cfg.blockedTags, suggestions };
+  return {
+    trackedTags: cfg.trackedTags,
+    blockedTags: cfg.blockedTags,
+    blockedIssuers: cfg.blockedIssuers,
+    makerMap: cfg.makerMap,
+    suggestions,
+  };
 };
