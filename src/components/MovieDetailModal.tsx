@@ -9,6 +9,7 @@ import type { Movie } from '@/types/av';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useDeleteMovie } from '@/hooks/useMovies';
 import { upgradeImageUrl } from '@/lib/utils';
+import { ScoreBreakdown } from './ScoreBreakdown';
 
 interface Props {
   movie: Movie | null;
@@ -189,6 +190,7 @@ export function MovieDetailModal({ movie, onClose }: Props) {
                   </div>
                 </div>
               )}
+              <ScoreBreakdown movie={movie} />
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}

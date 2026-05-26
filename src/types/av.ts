@@ -1,4 +1,4 @@
-import type { MatchTier } from '@/lib/taste/core';
+import type { MatchBreakdown, MatchTier } from '@/lib/taste/core';
 
 export interface Movie {
   code: string;
@@ -17,4 +17,6 @@ export interface Movie {
   matchTier?: MatchTier;
   /** 命中原因（女優/廠商/標籤）。 */
   matchReasons?: string[];
+  /** 評分明細（給 Modal 「為什麼?」用）。 */
+  matchBreakdown?: MatchBreakdown;
 }

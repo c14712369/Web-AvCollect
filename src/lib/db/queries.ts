@@ -83,6 +83,7 @@ export const listMovies = async (): Promise<Movie[]> => {
       matchScore: match.score,
       matchTier: match.tier,
       matchReasons: match.reasons,
+      matchBreakdown: match.breakdown,
     };
   });
 };
