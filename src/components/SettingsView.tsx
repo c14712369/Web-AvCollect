@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Plus, X, Tag, Ban, Sparkles, Loader2, Check, Save, RefreshCw } from 'lucide-react';
@@ -37,25 +37,61 @@ export function SettingsView({ initial }: Props) {
   const removeFrom = (list: string[], set: (v: string[]) => void, v: string) =>
     set(list.filter((x) => x !== v));
 
-  const persistPrefix = async (patch: { blockedIssuers?: string[]; makerMap?: Record<string, string> }) => {
-    if (patch.blockedIssuers) setBlockedIssuers(patch.blockedIssuers);
-    if (patch.makerMap) setMakerMap((prev) => ({ ...prev, ...patch.makerMap }));
+  // Prefix 持久化：debounce + abort，避免連點 race。
+  // 收到 success 後 *不再* 覆寫 UI state，因為樂觀更新已經是 user intent；
+  // 失敗才從 server fetch 真實狀態同步。
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingPatchRef = useRef<{ blockedIssuers?: string[]; makerMap?: Record<string, string> }>({});
+  const abortRef = useRef<AbortController | null>(null);
+
+  const flushPersist = async () => {
+    const patch = pendingPatchRef.current;
+    pendingPatchRef.current = {};
+    if (!patch.blockedIssuers && !patch.makerMap) return;
+
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
     try {
       const res = await fetch('/api/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(patch),
+        signal: ctrl.signal,
       });
       const data = await res.json();
       if (!data.success) throw new Error(typeof data.error === 'string' ? data.error : '儲存失敗');
-      setBlockedIssuers(data.blockedIssuers);
-      setMakerMap(data.makerMap);
       setError('');
     } catch (e) {
-      setBlockedIssuers(initial.blockedIssuers);
-      setMakerMap(initial.makerMap);
+      if ((e as Error).name === 'AbortError') return;
+      // 失敗：拉真實狀態回來、別猜
+      try {
+        const r = await fetch('/api/config');
+        const d = await r.json();
+        if (d?.success) {
+          setBlockedIssuers(d.blockedIssuers ?? []);
+          setMakerMap(d.makerMap ?? {});
+        }
+      } catch {}
       setError((e as Error).message);
     }
+  };
+
+  const persistPrefix = (patch: { blockedIssuers?: string[]; makerMap?: Record<string, string> }) => {
+    if (patch.blockedIssuers) setBlockedIssuers(patch.blockedIssuers);
+    if (patch.makerMap) setMakerMap((prev) => ({ ...prev, ...patch.makerMap }));
+
+    if (patch.blockedIssuers) pendingPatchRef.current.blockedIssuers = patch.blockedIssuers;
+    if (patch.makerMap) {
+      pendingPatchRef.current.makerMap = {
+        ...(pendingPatchRef.current.makerMap ?? {}),
+        ...patch.makerMap,
+      };
+    }
+
+    if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = setTimeout(flushPersist, 350);
   };
 
   const save = async () => {
@@ -140,6 +176,28 @@ export function SettingsView({ initial }: Props) {
           onAdd={(v) => addTo(blocked, setBlocked, v)}
           onRemove={(v) => removeFrom(blocked, setBlocked, v)}
         />
+
+        {suggestions.length > 0 && (
+          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4">
+            <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-white/70">
+              <Sparkles className="h-3.5 w-3.5 text-rose-300" />
+              來自你收藏的常見標籤
+              <span className="font-normal text-white/35">點一下加入黑名單</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((s) => (
+                <button
+                  key={`block-sug-${s}`}
+                  onClick={() => addTo(blocked, setBlocked, s)}
+                  className="group flex items-center gap-1 rounded-full border border-rose-400/20 bg-rose-500/10 px-3 py-1.5 text-sm text-rose-100/90 transition-all hover:border-rose-400/40 hover:bg-rose-500/20"
+                >
+                  <Plus className="h-3 w-3 opacity-60 group-hover:opacity-100" />
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <MakerPrefixManager
           makerMap={makerMap}
