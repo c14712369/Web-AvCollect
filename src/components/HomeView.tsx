@@ -143,6 +143,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         onToggleSort={() =>
           setSortBy((v) => (v === 'added' ? 'release' : v === 'release' ? 'match' : 'added'))
         }
+        onChangeSort={setSortBy}
       />
       <div className="mx-auto max-w-[1920px] px-4 py-8 sm:px-6 lg:px-8">
         <MovieGrid

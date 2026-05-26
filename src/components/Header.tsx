@@ -33,6 +33,7 @@ interface HeaderProps {
   searchInputRef?: React.Ref<HTMLInputElement>;
   sortBy: 'added' | 'release' | 'match';
   onToggleSort: () => void;
+  onChangeSort?: (v: 'added' | 'release' | 'match') => void;
 }
 
 export function Header(props: HeaderProps) {
@@ -46,14 +47,18 @@ export function Header(props: HeaderProps) {
     onAddMovie, isAdding, totalCount,
     onOpenImportExport,
     searchInputRef,
-    sortBy, onToggleSort,
+    sortBy, onToggleSort, onChangeSort,
   } = props;
 
-  const sortMeta = {
-    added: { icon: <Clock className="h-4 w-4 text-indigo-400" />, label: '最新加入' },
-    release: { icon: <Calendar className="h-4 w-4 text-rose-400" />, label: '最新發布' },
-    match: { icon: <Target className="h-4 w-4 text-violet-400" />, label: '依契合度' },
-  }[sortBy];
+  const sortOptions = [
+    { key: 'added' as const, icon: <Clock className="h-3.5 w-3.5" />, label: '最新加入' },
+    { key: 'release' as const, icon: <Calendar className="h-3.5 w-3.5" />, label: '最新發布' },
+    { key: 'match' as const, icon: <Target className="h-3.5 w-3.5" />, label: '喜愛分數' },
+  ];
+  const pickSort = (v: 'added' | 'release' | 'match') => {
+    if (onChangeSort) onChangeSort(v);
+    else if (v !== sortBy) onToggleSort();
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/5 glass">
@@ -100,15 +105,32 @@ export function Header(props: HeaderProps) {
                 {isAdding ? <Loader2 className="h-4 w-4 animate-spin text-indigo-400" /> : <Plus className="h-4 w-4 group-hover:scale-110 transition-transform text-indigo-400" />}
                 <span className="text-xs font-bold tracking-wide">新增收藏</span>
               </button>
-              <button
-                onClick={onToggleSort}
-                className="flex items-center gap-2 rounded-full glass border border-white/5 px-4 py-2.5 text-white/60 hover:text-white hover:border-white/20 transition-all duration-200"
-                aria-label="切換排序"
-                title={`目前：${sortMeta.label}`}
+              <div
+                role="radiogroup"
+                aria-label="排序方式"
+                className="flex items-center gap-0.5 rounded-full glass border border-white/5 p-0.5"
               >
-                {sortMeta.icon}
-                <span className="text-xs font-bold tracking-wide">{sortMeta.label}</span>
-              </button>
+                {sortOptions.map((opt) => {
+                  const active = opt.key === sortBy;
+                  return (
+                    <button
+                      key={opt.key}
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => pickSort(opt.key)}
+                      title={opt.label}
+                      className={
+                        active
+                          ? 'flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-500/30 to-violet-500/30 px-3 py-2 text-violet-100 shadow-inner ring-1 ring-violet-400/30 transition-all'
+                          : 'flex items-center gap-1.5 rounded-full px-3 py-2 text-white/50 transition-all hover:text-white hover:bg-white/5'
+                      }
+                    >
+                      {opt.icon}
+                      <span className="text-xs font-bold tracking-wide">{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
               <button
                 onClick={onToggleRecommendedOnly}
                 className={`group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border ${
