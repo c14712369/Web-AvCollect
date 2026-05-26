@@ -154,8 +154,10 @@ export interface TagSettings {
   blockedTags: string[];
   blockedIssuers: string[];
   makerMap: Record<string, string>;
-  /** 收藏裡常出現、但尚未追蹤/封鎖的標籤（依出現次數排序），供一鍵加入。 */
+  /** 收藏裡常出現、但尚未追蹤/封鎖的標籤，供「加入追蹤」一鍵用。 */
   suggestions: string[];
+  /** 只出現在「未收藏」片裡（從沒進過你收藏）的常見標籤，供「加入黑名單」一鍵用。 */
+  blockedSuggestions: string[];
 }
 
 export const getTagSettings = async (): Promise<TagSettings> => {
@@ -163,16 +165,27 @@ export const getTagSettings = async (): Promise<TagSettings> => {
   const favCodes = new Set(await listFavorites());
   const rows = await db.select().from(movies);
 
-  const counts = new Map<string, number>();
+  const favCounts = new Map<string, number>();
+  const nonFavCounts = new Map<string, number>();
   for (const row of rows) {
-    if (!favCodes.has(row.code)) continue;
-    for (const t of themesOf(row)) counts.set(t, (counts.get(t) ?? 0) + 1);
+    const target = favCodes.has(row.code) ? favCounts : nonFavCounts;
+    for (const t of themesOf(row)) target.set(t, (target.get(t) ?? 0) + 1);
   }
 
   const tracked = new Set(cfg.trackedTags);
   const blocked = new Set(cfg.blockedTags);
-  const suggestions = [...counts.entries()]
+
+  // 追蹤建議：你收藏裡常出現、但未追蹤未封鎖（= 你會喜歡）
+  const suggestions = [...favCounts.entries()]
     .filter(([t]) => !tracked.has(t) && !blocked.has(t))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([t]) => t);
+
+  // 黑名單建議：只出現在「未收藏的片」的常見標籤（= 你從來沒興趣留下的）
+  // 過濾掉曾在收藏裡出現過 (favCounts.has) 的 tag，避免跟上面建議重複
+  const blockedSuggestions = [...nonFavCounts.entries()]
+    .filter(([t]) => !tracked.has(t) && !blocked.has(t) && !favCounts.has(t))
     .sort((a, b) => b[1] - a[1])
     .slice(0, 15)
     .map(([t]) => t);
@@ -183,5 +196,6 @@ export const getTagSettings = async (): Promise<TagSettings> => {
     blockedIssuers: cfg.blockedIssuers,
     makerMap: cfg.makerMap,
     suggestions,
+    blockedSuggestions,
   };
 };

@@ -15,6 +15,7 @@ export function SettingsView({ initial }: Props) {
   const [tracked, setTracked] = useState<string[]>(initial.trackedTags);
   const [blocked, setBlocked] = useState<string[]>(initial.blockedTags);
   const [suggestions, setSuggestions] = useState<string[]>(initial.suggestions);
+  const [blockedSuggestions, setBlockedSuggestions] = useState<string[]>(initial.blockedSuggestions);
   const [makerMap, setMakerMap] = useState<Record<string, string>>(initial.makerMap);
   const [blockedIssuers, setBlockedIssuers] = useState<string[]>(initial.blockedIssuers);
   const [saving, setSaving] = useState(false);
@@ -33,6 +34,7 @@ export function SettingsView({ initial }: Props) {
     if (!v || list.includes(v)) return;
     set([...list, v]);
     setSuggestions((s) => s.filter((x) => x !== v));
+    setBlockedSuggestions((s) => s.filter((x) => x !== v));
   };
   const removeFrom = (list: string[], set: (v: string[]) => void, v: string) =>
     set(list.filter((x) => x !== v));
@@ -108,6 +110,7 @@ export function SettingsView({ initial }: Props) {
       setTracked(data.trackedTags);
       setBlocked(data.blockedTags);
       setSuggestions(data.suggestions);
+      setBlockedSuggestions(data.blockedSuggestions);
       setSavedAt(Date.now());
     } catch (e) {
       setError((e as Error).message);
@@ -177,15 +180,15 @@ export function SettingsView({ initial }: Props) {
           onRemove={(v) => removeFrom(blocked, setBlocked, v)}
         />
 
-        {suggestions.length > 0 && (
+        {blockedSuggestions.length > 0 && (
           <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4">
             <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-white/70">
               <Sparkles className="h-3.5 w-3.5 text-rose-300" />
-              來自你收藏的常見標籤
+              你「沒收藏」的片常見標籤
               <span className="font-normal text-white/35">點一下加入黑名單</span>
             </p>
             <div className="flex flex-wrap gap-2">
-              {suggestions.map((s) => (
+              {blockedSuggestions.map((s) => (
                 <button
                   key={`block-sug-${s}`}
                   onClick={() => addTo(blocked, setBlocked, s)}
