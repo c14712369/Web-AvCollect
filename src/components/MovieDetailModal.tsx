@@ -21,7 +21,7 @@ export function MovieDetailModal({ movie, onClose }: Props) {
   const { mutate: deleteMovie, isPending: isDeleting } = useDeleteMovie();
 
   const handleDelete = () => {
-    if (window.confirm('\u78BA\u5B9A\u8981\u522A\u9664\u9019\u90E8\u5F71\u7247\u55CE\uFF1F')) {
+    if (window.confirm('確定要刪除這部影片嗎？')) {
       if (movie) deleteMovie(movie.code, { onSuccess: onClose });
     }
   };
@@ -116,7 +116,30 @@ export function MovieDetailModal({ movie, onClose }: Props) {
                   />
                 </button>
               </div>
+              
               <h2 className="text-lg font-bold leading-snug text-white">{movie.title}</h2>
+
+              {/* 操作按鈕 - 放在標題下方 */}
+              <div className="flex gap-2.5 pt-1">
+                <a
+                  href={movie.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={onClose}
+                  className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition hover:shadow-indigo-500/50 active:scale-95"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  前往觀看
+                </a>
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-rose-500/10 px-4 py-3.5 text-sm font-bold text-rose-500 transition hover:bg-rose-500/20 disabled:opacity-50 border border-rose-500/20 active:scale-95"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {isDeleting ? '...' : '刪除'}
+                </button>
+              </div>
 
               {/* 口味契合度 */}
               {movie.matchScore != null && (
@@ -178,6 +201,7 @@ export function MovieDetailModal({ movie, onClose }: Props) {
                   <Field label="女優" value="—" />
                 )}
               </div>
+
               {movie.themes.length > 0 && (
                 <div>
                   <p className="text-[10px] font-medium uppercase tracking-widest text-white/40 mb-2">主題</p>
@@ -191,23 +215,6 @@ export function MovieDetailModal({ movie, onClose }: Props) {
                 </div>
               )}
               <ScoreBreakdown movie={movie} />
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-rose-500/10 px-6 py-3 text-sm font-bold text-rose-500 transition hover:bg-rose-500/20 disabled:opacity-50 border border-rose-500/20"
-              >
-                <Trash2 className="h-4 w-4" />
-                {isDeleting ? '\u522A\u9664\u4E2D...' : '\u522A\u9664\u5F71\u7247'}
-              </button>
-              <a
-                href={movie.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-violet-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition hover:shadow-indigo-500/50"
-              >
-                <ExternalLink className="h-4 w-4" />
-                前往觀看
-              </a>
             </div>
           </motion.div>
         </motion.div>

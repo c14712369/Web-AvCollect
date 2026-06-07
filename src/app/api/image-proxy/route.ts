@@ -1,11 +1,38 @@
 import { NextResponse } from 'next/server';
 
+// 僅允許從這些網域代理圖片，避免 SSRF（探測內網 / 雲端 metadata）
+const ALLOWED_HOSTS = [
+  'sixyik.com',
+  'cdn.jable.tv',
+  'jable.tv',
+  'missav.com',
+  'fourhoi.com',
+  'eightcdn.com',
+];
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const url = searchParams.get('url');
 
   if (!url) {
     return new NextResponse('Missing url parameter', { status: 400 });
+  }
+
+  // SSRF 防護：驗證協議與 hostname 白名單
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return new NextResponse('Invalid url', { status: 400 });
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    return new NextResponse('Disallowed protocol', { status: 400 });
+  }
+  const isAllowed = ALLOWED_HOSTS.some(
+    (h) => parsed.hostname === h || parsed.hostname.endsWith('.' + h)
+  );
+  if (!isAllowed) {
+    return new NextResponse('Disallowed host', { status: 400 });
   }
 
   try {
