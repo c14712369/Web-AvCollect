@@ -33,6 +33,7 @@ export async function POST(req: Request) {
     if (url.includes('jable.tv')) source = 'Jable';
     else if (url.includes('missav')) source = 'MissAV';
     else if (url.includes('javrate.com')) source = 'Javrate';
+    else if (url.includes('supjav.com')) source = 'SupJav';
 
     const res = await fetch(url, {
       headers: {
@@ -76,6 +77,9 @@ export async function POST(req: Request) {
         if (!imageUrl && code !== 'UNKNOWN') {
           imageUrl = `https://sixyik.com/${code.toLowerCase()}/cover-n.jpg`;
         }
+      } else if (source === 'SupJav') {
+        // SupJav 無 og:image；詳情頁主圖在 .post-meta img.img（全尺寸）
+        imageUrl = $('.post-meta img.img').attr('src') || '';
       }
     }
 

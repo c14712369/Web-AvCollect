@@ -54,7 +54,7 @@ export function AddMovieDialog({ open, onClose, onSubmit, isSubmitting }: Props)
               <X className="h-4 w-4" />
             </button>
             <h3 className="text-lg font-bold text-white">新增收藏</h3>
-            <p className="mt-1 text-xs text-white/40">支援 Jable、MissAV、Javrate 連結</p>
+            <p className="mt-1 text-xs text-white/40">支援 Jable、MissAV、Javrate、SupJav 連結</p>
 
             <input
               type="url"

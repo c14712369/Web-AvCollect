@@ -19,5 +19,9 @@ export function upgradeImageUrl(url: string, source: string): string {
   if (source === 'Javrate') {
     return url.replace('_thumbnail.webp', '.webp');
   }
+  if (source === 'SupJav') {
+    // `!320x216.jpg` 之類的後綴是縮圖參數，去掉即全尺寸
+    return url.replace(/!\d+x\d+\.jpg$/, '');
+  }
   return url;
 }
