@@ -3,13 +3,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus, X, Tag, Ban, Sparkles, Loader2, Check, Save, RefreshCw, Star } from 'lucide-react';
+import { ArrowLeft, Plus, X, Tag, Ban, Sparkles, Loader2, Check, Save, RefreshCw, Star, Building2, Wrench } from 'lucide-react';
 import type { TagSettings } from '@/lib/db/queries';
 import { MakerPrefixManager } from './MakerPrefixManager';
 
 interface Props {
   initial: TagSettings;
 }
+
+type SettingsTab = 'tags' | 'actress' | 'maker' | 'maintenance';
+
+const TABS: { key: SettingsTab; label: string; icon: React.ReactNode }[] = [
+  { key: 'tags', label: '口味標籤', icon: <Tag className="h-3.5 w-3.5" /> },
+  { key: 'actress', label: '喜愛女優', icon: <Star className="h-3.5 w-3.5" /> },
+  { key: 'maker', label: '片商規則', icon: <Building2 className="h-3.5 w-3.5" /> },
+  { key: 'maintenance', label: '維護', icon: <Wrench className="h-3.5 w-3.5" /> },
+];
 
 export function SettingsView({ initial }: Props) {
   const [tracked, setTracked] = useState<string[]>(initial.trackedTags);
@@ -23,6 +32,7 @@ export function SettingsView({ initial }: Props) {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(0);
   const [error, setError] = useState('');
+  const [tab, setTab] = useState<SettingsTab>('tags');
 
   const dirty = useMemo(
     () =>
@@ -126,7 +136,7 @@ export function SettingsView({ initial }: Props) {
   };
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white font-inter selection:bg-indigo-500/30">
+    <main className="min-h-screen bg-background text-white font-inter selection:bg-indigo-500/30">
       <header className="sticky top-0 z-50 w-full border-b border-white/5 glass">
         <div className="mx-auto flex max-w-3xl items-center gap-4 px-4 py-4 sm:px-6">
           <Link
@@ -143,129 +153,165 @@ export function SettingsView({ initial }: Props) {
         </div>
       </header>
 
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 space-y-6">
-        <TagEditor
-          icon={<Tag className="h-4 w-4 text-violet-300" />}
-          title="追蹤標籤"
-          hint="符合的片會加分；熱門榜命中也更容易被推薦"
-          accent="violet"
-          tags={tracked}
-          onAdd={(v) => addTo(tracked, setTracked, v)}
-          onRemove={(v) => removeFrom(tracked, setTracked, v)}
-        />
+      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+        {/* Segmented Tabs：依特性切換，一次只顯示一群 */}
+        <div
+          role="tablist"
+          aria-label="設定分類"
+          className="mb-6 flex items-center gap-1 overflow-x-auto rounded-full glass border border-white/5 p-1 no-scrollbar"
+        >
+          {TABS.map((t) => {
+            const active = t.key === tab;
+            return (
+              <button
+                key={t.key}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTab(t.key)}
+                className={
+                  active
+                    ? 'flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-500/30 to-violet-500/30 px-4 py-2 text-sm font-bold text-violet-100 shadow-inner ring-1 ring-violet-400/30 transition-all'
+                    : 'flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-white/50 transition-all hover:bg-white/5 hover:text-white'
+                }
+              >
+                {t.icon}
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
 
-        {suggestions.length > 0 && (
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4">
-            <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-white/70">
-              <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-              來自你收藏的常見標籤
-              <span className="font-normal text-white/35">點一下加入追蹤</span>
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {suggestions.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => addTo(tracked, setTracked, s)}
-                  className="group flex items-center gap-1 rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-100/90 transition-all hover:border-amber-400/40 hover:bg-amber-500/20"
-                >
-                  <Plus className="h-3 w-3 opacity-60 group-hover:opacity-100" />
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18 }}
+            className="space-y-6"
+          >
+            {tab === 'tags' && (
+              <>
+                <TagEditor
+                  icon={<Tag className="h-4 w-4 text-violet-300" />}
+                  title="追蹤標籤"
+                  hint="符合的片會加分；熱門榜命中也更容易被推薦"
+                  accent="violet"
+                  tags={tracked}
+                  onAdd={(v) => addTo(tracked, setTracked, v)}
+                  onRemove={(v) => removeFrom(tracked, setTracked, v)}
+                />
 
-        <TagEditor
-          icon={<Ban className="h-4 w-4 text-rose-300" />}
-          title="黑名單標籤"
-          hint="命中就排除（但若同時是追蹤女優則保留）"
-          accent="rose"
-          tags={blocked}
-          onAdd={(v) => addTo(blocked, setBlocked, v)}
-          onRemove={(v) => removeFrom(blocked, setBlocked, v)}
-        />
+                {suggestions.length > 0 && (
+                  <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4">
+                    <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-white/70">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+                      來自你收藏的常見標籤
+                      <span className="font-normal text-white/35">點一下加入追蹤</span>
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestions.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => addTo(tracked, setTracked, s)}
+                          className="group flex items-center gap-1 rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-100/90 transition-all hover:border-amber-400/40 hover:bg-amber-500/20"
+                        >
+                          <Plus className="h-3 w-3 opacity-60 group-hover:opacity-100" />
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-        {blockedSuggestions.length > 0 && (
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4">
-            <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-white/70">
-              <Sparkles className="h-3.5 w-3.5 text-rose-300" />
-              你「沒收藏」的片常見標籤
-              <span className="font-normal text-white/35">點一下加入黑名單</span>
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {blockedSuggestions.map((s) => (
-                <button
-                  key={`block-sug-${s}`}
-                  onClick={() => addTo(blocked, setBlocked, s)}
-                  className="group flex items-center gap-1 rounded-full border border-rose-400/20 bg-rose-500/10 px-3 py-1.5 text-sm text-rose-100/90 transition-all hover:border-rose-400/40 hover:bg-rose-500/20"
-                >
-                  <Plus className="h-3 w-3 opacity-60 group-hover:opacity-100" />
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+                <TagEditor
+                  icon={<Ban className="h-4 w-4 text-rose-300" />}
+                  title="黑名單標籤"
+                  hint="命中就排除（但若同時是追蹤女優則保留）"
+                  accent="rose"
+                  tags={blocked}
+                  onAdd={(v) => addTo(blocked, setBlocked, v)}
+                  onRemove={(v) => removeFrom(blocked, setBlocked, v)}
+                />
 
-        <TagEditor
-          icon={<Star className="h-4 w-4 text-pink-300" />}
-          title="喜愛女優名單"
-          hint="清單內的女優作品會大幅加分（直接列為高契合），並可在首頁用「喜愛女優」一鍵篩選"
-          accent="pink"
-          tags={preferredActresses}
-          onAdd={(v) => addTo(preferredActresses, setPreferredActresses, v)}
-          onRemove={(v) => removeFrom(preferredActresses, setPreferredActresses, v)}
-          placeholder="輸入女優名後按 Enter…"
-        />
+                {blockedSuggestions.length > 0 && (
+                  <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4">
+                    <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-white/70">
+                      <Sparkles className="h-3.5 w-3.5 text-rose-300" />
+                      你「沒收藏」的片常見標籤
+                      <span className="font-normal text-white/35">點一下加入黑名單</span>
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {blockedSuggestions.map((s) => (
+                        <button
+                          key={`block-sug-${s}`}
+                          onClick={() => addTo(blocked, setBlocked, s)}
+                          className="group flex items-center gap-1 rounded-full border border-rose-400/20 bg-rose-500/10 px-3 py-1.5 text-sm text-rose-100/90 transition-all hover:border-rose-400/40 hover:bg-rose-500/20"
+                        >
+                          <Plus className="h-3 w-3 opacity-60 group-hover:opacity-100" />
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
-        {actressSuggestions.length > 0 && (
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4">
-            <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-white/70">
-              <Sparkles className="h-3.5 w-3.5 text-pink-300" />
-              你收藏裡常出現的女優
-              <span className="font-normal text-white/35">點一下加入喜愛名單</span>
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {actressSuggestions.map((s) => (
-                <button
-                  key={`actress-sug-${s}`}
-                  onClick={() => addTo(preferredActresses, setPreferredActresses, s)}
-                  className="group flex items-center gap-1 rounded-full border border-pink-400/20 bg-pink-500/10 px-3 py-1.5 text-sm text-pink-100/90 transition-all hover:border-pink-400/40 hover:bg-pink-500/20"
-                >
-                  <Plus className="h-3 w-3 opacity-60 group-hover:opacity-100" />
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+            {tab === 'actress' && (
+              <>
+                <TagEditor
+                  icon={<Star className="h-4 w-4 text-pink-300" />}
+                  title="喜愛女優名單"
+                  hint="清單內的女優作品會大幅加分（直接列為高契合），並可在首頁用「喜愛女優」一鍵篩選"
+                  accent="pink"
+                  tags={preferredActresses}
+                  onAdd={(v) => addTo(preferredActresses, setPreferredActresses, v)}
+                  onRemove={(v) => removeFrom(preferredActresses, setPreferredActresses, v)}
+                  placeholder="輸入女優名後按 Enter…"
+                />
 
-        <MakerPrefixManager
-          makerMap={makerMap}
-          blockedIssuers={blockedIssuers}
-          onChange={persistPrefix}
-        />
+                {actressSuggestions.length > 0 && (
+                  <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4">
+                    <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-white/70">
+                      <Sparkles className="h-3.5 w-3.5 text-pink-300" />
+                      你收藏裡常出現的女優
+                      <span className="font-normal text-white/35">點一下加入喜愛名單</span>
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {actressSuggestions.map((s) => (
+                        <button
+                          key={`actress-sug-${s}`}
+                          onClick={() => addTo(preferredActresses, setPreferredActresses, s)}
+                          className="group flex items-center gap-1 rounded-full border border-pink-400/20 bg-pink-500/10 px-3 py-1.5 text-sm text-pink-100/90 transition-all hover:border-pink-400/40 hover:bg-pink-500/20"
+                        >
+                          <Plus className="h-3 w-3 opacity-60 group-hover:opacity-100" />
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
-        <BackfillCard />
+            {tab === 'maker' && (
+              <MakerPrefixManager
+                makerMap={makerMap}
+                blockedIssuers={blockedIssuers}
+                onChange={persistPrefix}
+              />
+            )}
+
+            {tab === 'maintenance' && <BackfillCard />}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      {/* 儲存列 */}
+      {/* 儲存列：僅在標籤/女優分頁或有未儲存變更時顯示（片商、維護為自動存檔） */}
+      {(tab === 'tags' || tab === 'actress' || dirty) && (
       <div className="sticky bottom-0 z-40 border-t border-white/5 glass">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <div className="min-h-[20px] text-sm">
-            {error ? (
-              <span className="text-rose-400">{error}</span>
-            ) : savedAt && !dirty ? (
-              <span className="flex items-center gap-1.5 text-emerald-400">
-                <Check className="h-4 w-4" /> 已儲存
-              </span>
-            ) : dirty ? (
-              <span className="text-white/40">有未儲存的變更</span>
-            ) : (
-              <span className="text-white/30">追蹤 {tracked.length}・黑名單 {blocked.length}・女優 {preferredActresses.length}</span>
-            )}
-          </div>
           <button
             onClick={save}
             disabled={!dirty || saving}
@@ -274,8 +320,22 @@ export function SettingsView({ initial }: Props) {
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             儲存變更
           </button>
+          <div className="min-h-[20px] text-right text-sm">
+            {error ? (
+              <span className="text-rose-400">{error}</span>
+            ) : savedAt && !dirty ? (
+              <span className="flex items-center justify-end gap-1.5 text-emerald-400">
+                <Check className="h-4 w-4" /> 已儲存
+              </span>
+            ) : dirty ? (
+              <span className="text-white/40">有未儲存的變更</span>
+            ) : (
+              <span className="text-white/30">追蹤 {tracked.length}・黑名單 {blocked.length}・女優 {preferredActresses.length}</span>
+            )}
+          </div>
         </div>
       </div>
+      )}
     </main>
   );
 }

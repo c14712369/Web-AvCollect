@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { LayoutGrid, Heart, Plus, Loader2, Database, Calendar, Clock, Target, Sparkles, Settings, Star } from 'lucide-react';
 import { CategoryDropdown } from './CategoryDropdown';
 import { SearchInput } from './SearchInput';
-import { ThemeToggle } from './ThemeToggle';
 import { LogoutButton } from './LogoutButton';
 
 interface HeaderProps {
@@ -63,7 +62,6 @@ export function Header(props: HeaderProps) {
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-white leading-none">AvCollect</h1>
-                <p className="text-[10px] font-medium text-white/40 uppercase tracking-widest mt-0.5">頂級數位資產典藏庫</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -76,7 +74,6 @@ export function Header(props: HeaderProps) {
               >
                 <Settings className="h-4 w-4" />
               </Link>
-              <ThemeToggle />
               <LogoutButton />
             </div>
           </div>

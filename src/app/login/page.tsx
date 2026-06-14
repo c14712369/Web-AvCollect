@@ -85,7 +85,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <main className="relative flex min-h-screen items-center justify-center bg-[#050505] px-4 selection:bg-indigo-500/30">
+    <main className="relative flex min-h-screen items-center justify-center bg-background px-4 selection:bg-indigo-500/30">
       <Suspense>
         <LoginForm />
       </Suspense>

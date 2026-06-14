@@ -121,7 +121,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   };
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white font-inter selection:bg-indigo-500/30">
+    <main className="min-h-screen bg-background text-white font-inter selection:bg-indigo-500/30">
       <Header
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}

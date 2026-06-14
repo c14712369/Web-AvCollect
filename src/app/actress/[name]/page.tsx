@@ -18,7 +18,7 @@ export default async function ActressPage({ params }: PageProps) {
 
   if (works.length === 0) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-[#050505] px-6 text-center">
+      <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center">
         <div className="mb-4 rounded-full bg-white/5 p-4 border border-white/10">
           <User className="h-8 w-8 text-white/30" />
         </div>

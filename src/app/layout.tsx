@@ -7,7 +7,7 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AvCollect | 頂級數位資產典藏庫",
+  title: "AvCollect",
   description: "專業級數位資產管理工具，打造極致的收藏與瀏覽體驗。",
   manifest: "/manifest.json",
   appleWebApp: {
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#09090b",
+  themeColor: "#17171f",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -32,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-TW" suppressHydrationWarning>
+    <html lang="zh-TW" className="dark" suppressHydrationWarning>
       <body className={cn(inter.className, "min-h-screen selection:bg-indigo-500/30")}>
         <Providers>{children}</Providers>
       </body>
