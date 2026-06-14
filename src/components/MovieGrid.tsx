@@ -1,31 +1,21 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Info } from 'lucide-react';
 import type { Movie } from '@/types/av';
 import { AvCard } from './AvCard';
+import { Pagination } from './Pagination';
 
 interface MovieGridProps {
   movies: Movie[];
   favorites: string[];
   onToggleFavorite: (code: string) => void;
   onSelectMovie: (movie: Movie) => void;
-}
-
-const COLUMN_BREAKPOINTS: Array<[number, number]> = [
-  [1920, 10],
-  [1536, 8],
-  [1280, 6],
-  [1024, 5],
-  [768, 4],
-  [640, 3],
-  [0, 2],
-];
-
-function getColumnCount(width: number): number {
-  return COLUMN_BREAKPOINTS.find(([min]) => width >= min)?.[1] ?? 2;
+  /** 一頁顯示幾部，預設 24。 */
+  pageSize?: number;
+  /** 此值變動時自動跳回第一頁（用來在篩選/搜尋改變時 reset）。 */
+  resetKey?: string;
 }
 
 export function MovieGrid({
@@ -33,33 +23,35 @@ export function MovieGrid({
   favorites,
   onToggleFavorite,
   onSelectMovie,
+  pageSize = 24,
+  resetKey,
 }: MovieGridProps) {
-  const parentRef = useRef<HTMLDivElement>(null);
-  const [columns, setColumns] = useState(6);
+  const [page, setPage] = useState(1);
 
+  // 篩選/搜尋條件改變 → 回到第一頁（收藏單顆 toggle 不會觸發，因為 resetKey 不含它）
   useEffect(() => {
-    const update = () => setColumns(getColumnCount(window.innerWidth));
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
+    setPage(1);
+  }, [resetKey]);
 
-  const rows = useMemo(() => {
-    const out: Movie[][] = [];
-    for (let i = 0; i < movies.length; i += columns) {
-      out.push(movies.slice(i, i + columns));
+  const totalPages = Math.max(1, Math.ceil(movies.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+
+  // 列表變短導致目前頁超出範圍時，把 state 收斂回合法頁
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  const pageItems = useMemo(
+    () => movies.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [movies, safePage, pageSize]
+  );
+
+  const goTo = (p: number) => {
+    setPage(p);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    return out;
-  }, [movies, columns]);
-
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => parentRef.current,
-    // 初始估值；實際列高交給 measureElement 動態量測，
-    // 故卡片比例/欄數改變時版面都會自動對齊（不再依賴寫死的魔術數字）。
-    estimateSize: () => 300,
-    overscan: 4,
-  });
+  };
 
   if (movies.length === 0) {
     return (
@@ -78,56 +70,30 @@ export function MovieGrid({
   }
 
   return (
-    <div ref={parentRef} className="h-[calc(100vh-220px)] overflow-auto">
-      <AnimatePresence mode="popLayout">
-        <div
-          style={{
-            height: `${virtualizer.getTotalSize()}px`,
-            width: '100%',
-            position: 'relative',
-          }}
-        >
-          {virtualizer.getVirtualItems().map((virtualRow) => (
-            <div
-              key={virtualRow.key}
-              data-index={virtualRow.index}
-              ref={virtualizer.measureElement}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                transform: `translateY(${virtualRow.start}px)`,
-              }}
+    <div>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <AnimatePresence mode="popLayout">
+          {pageItems.map((movie) => (
+            <motion.div
+              key={movie.code}
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.2 }}
             >
-              <div
-                className="grid gap-3 pb-3"
-                style={{
-                  gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-                }}
-              >
-                {rows[virtualRow.index].map((movie) => (
-                  <motion.div
-                    key={movie.code}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <AvCard
-                      movie={movie}
-                      favorited={favorites.includes(movie.code)}
-                      onToggleFavorite={onToggleFavorite}
-                      onSelect={onSelectMovie}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            </div>
+              <AvCard
+                movie={movie}
+                favorited={favorites.includes(movie.code)}
+                onToggleFavorite={onToggleFavorite}
+                onSelect={onSelectMovie}
+              />
+            </motion.div>
           ))}
-        </div>
-      </AnimatePresence>
+        </AnimatePresence>
+      </div>
+
+      <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={goTo} />
     </div>
   );
 }

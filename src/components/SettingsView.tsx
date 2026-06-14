@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus, X, Tag, Ban, Sparkles, Loader2, Check, Save, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Plus, X, Tag, Ban, Sparkles, Loader2, Check, Save, RefreshCw, Star } from 'lucide-react';
 import type { TagSettings } from '@/lib/db/queries';
 import { MakerPrefixManager } from './MakerPrefixManager';
 
@@ -14,8 +14,10 @@ interface Props {
 export function SettingsView({ initial }: Props) {
   const [tracked, setTracked] = useState<string[]>(initial.trackedTags);
   const [blocked, setBlocked] = useState<string[]>(initial.blockedTags);
+  const [preferredActresses, setPreferredActresses] = useState<string[]>(initial.preferredActresses);
   const [suggestions, setSuggestions] = useState<string[]>(initial.suggestions);
   const [blockedSuggestions, setBlockedSuggestions] = useState<string[]>(initial.blockedSuggestions);
+  const [actressSuggestions, setActressSuggestions] = useState<string[]>(initial.actressSuggestions);
   const [makerMap, setMakerMap] = useState<Record<string, string>>(initial.makerMap);
   const [blockedIssuers, setBlockedIssuers] = useState<string[]>(initial.blockedIssuers);
   const [saving, setSaving] = useState(false);
@@ -25,8 +27,9 @@ export function SettingsView({ initial }: Props) {
   const dirty = useMemo(
     () =>
       JSON.stringify(tracked) !== JSON.stringify(initial.trackedTags) ||
-      JSON.stringify(blocked) !== JSON.stringify(initial.blockedTags),
-    [tracked, blocked, initial]
+      JSON.stringify(blocked) !== JSON.stringify(initial.blockedTags) ||
+      JSON.stringify(preferredActresses) !== JSON.stringify(initial.preferredActresses),
+    [tracked, blocked, preferredActresses, initial]
   );
 
   const addTo = (list: string[], set: (v: string[]) => void, raw: string) => {
@@ -35,6 +38,7 @@ export function SettingsView({ initial }: Props) {
     set([...list, v]);
     setSuggestions((s) => s.filter((x) => x !== v));
     setBlockedSuggestions((s) => s.filter((x) => x !== v));
+    setActressSuggestions((s) => s.filter((x) => x !== v));
   };
   const removeFrom = (list: string[], set: (v: string[]) => void, v: string) =>
     set(list.filter((x) => x !== v));
@@ -103,14 +107,16 @@ export function SettingsView({ initial }: Props) {
       const res = await fetch('/api/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trackedTags: tracked, blockedTags: blocked }),
+        body: JSON.stringify({ trackedTags: tracked, blockedTags: blocked, preferredActresses }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(typeof data.error === 'string' ? data.error : '儲存失敗');
       setTracked(data.trackedTags);
       setBlocked(data.blockedTags);
+      setPreferredActresses(data.preferredActresses);
       setSuggestions(data.suggestions);
       setBlockedSuggestions(data.blockedSuggestions);
+      setActressSuggestions(data.actressSuggestions);
       setSavedAt(Date.now());
     } catch (e) {
       setError((e as Error).message);
@@ -131,8 +137,8 @@ export function SettingsView({ initial }: Props) {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold tracking-tight leading-none">標籤偏好設定</h1>
-            <p className="mt-0.5 text-sm text-white/40">維護追蹤與黑名單標籤，調校你的推薦口味</p>
+            <h1 className="text-xl font-bold tracking-tight leading-none">偏好設定</h1>
+            <p className="mt-0.5 text-sm text-white/40">維護追蹤標籤、黑名單與喜愛女優，調校你的推薦口味</p>
           </div>
         </div>
       </header>
@@ -202,6 +208,39 @@ export function SettingsView({ initial }: Props) {
           </div>
         )}
 
+        <TagEditor
+          icon={<Star className="h-4 w-4 text-pink-300" />}
+          title="喜愛女優名單"
+          hint="清單內的女優作品會大幅加分（直接列為高契合），並可在首頁用「喜愛女優」一鍵篩選"
+          accent="pink"
+          tags={preferredActresses}
+          onAdd={(v) => addTo(preferredActresses, setPreferredActresses, v)}
+          onRemove={(v) => removeFrom(preferredActresses, setPreferredActresses, v)}
+          placeholder="輸入女優名後按 Enter…"
+        />
+
+        {actressSuggestions.length > 0 && (
+          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4">
+            <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-white/70">
+              <Sparkles className="h-3.5 w-3.5 text-pink-300" />
+              你收藏裡常出現的女優
+              <span className="font-normal text-white/35">點一下加入喜愛名單</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {actressSuggestions.map((s) => (
+                <button
+                  key={`actress-sug-${s}`}
+                  onClick={() => addTo(preferredActresses, setPreferredActresses, s)}
+                  className="group flex items-center gap-1 rounded-full border border-pink-400/20 bg-pink-500/10 px-3 py-1.5 text-sm text-pink-100/90 transition-all hover:border-pink-400/40 hover:bg-pink-500/20"
+                >
+                  <Plus className="h-3 w-3 opacity-60 group-hover:opacity-100" />
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <MakerPrefixManager
           makerMap={makerMap}
           blockedIssuers={blockedIssuers}
@@ -224,7 +263,7 @@ export function SettingsView({ initial }: Props) {
             ) : dirty ? (
               <span className="text-white/40">有未儲存的變更</span>
             ) : (
-              <span className="text-white/30">追蹤 {tracked.length}・黑名單 {blocked.length}</span>
+              <span className="text-white/30">追蹤 {tracked.length}・黑名單 {blocked.length}・女優 {preferredActresses.length}</span>
             )}
           </div>
           <button
@@ -339,18 +378,21 @@ interface EditorProps {
   icon: React.ReactNode;
   title: string;
   hint: string;
-  accent: 'violet' | 'rose';
+  accent: 'violet' | 'rose' | 'pink';
   tags: string[];
   onAdd: (v: string) => void;
   onRemove: (v: string) => void;
+  placeholder?: string;
 }
 
-function TagEditor({ icon, title, hint, accent, tags, onAdd, onRemove }: EditorProps) {
+function TagEditor({ icon, title, hint, accent, tags, onAdd, onRemove, placeholder }: EditorProps) {
   const [input, setInput] = useState('');
   const chip =
     accent === 'violet'
       ? 'border-violet-400/25 bg-violet-500/15 text-violet-100'
-      : 'border-rose-400/25 bg-rose-500/15 text-rose-100';
+      : accent === 'pink'
+        ? 'border-pink-400/25 bg-pink-500/15 text-pink-100'
+        : 'border-rose-400/25 bg-rose-500/15 text-rose-100';
 
   const submit = () => {
     onAdd(input);
@@ -378,7 +420,7 @@ function TagEditor({ icon, title, hint, accent, tags, onAdd, onRemove }: EditorP
               submit();
             }
           }}
-          placeholder="輸入標籤後按 Enter…"
+          placeholder={placeholder ?? '輸入標籤後按 Enter…'}
           className="flex-1 rounded-xl border border-white/10 bg-black/30 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-all focus-visible:border-violet-500/50 focus-visible:ring-2 focus-visible:ring-violet-500/30"
         />
         <button

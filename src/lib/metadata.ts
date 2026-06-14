@@ -14,7 +14,8 @@ export function extractMaker(code: string): string {
  * 這個規則目前不從 config 來；之後若想客製化 regex 可移到 config。
  */
 export function extractActress(title: string): string | null {
-  const match = title.match(/(?:~|-|—|－|\s)([一-龥ぁ-んァ-ヶ]+)$/);
+  // 先 trim：來源標題尾端常帶多餘空白，會讓 `$` 對不上而抓不到女優名
+  const match = title.trim().match(/(?:~|-|—|－|\s)([一-龥ぁ-んァ-ヶ]+)$/);
   if (match && match[1].length >= 2 && match[1].length <= 6) {
     return match[1].trim();
   }

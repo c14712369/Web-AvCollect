@@ -25,7 +25,7 @@ export function ActressView({ name, works }: ActressViewProps) {
   return (
     <main className="min-h-screen bg-[#050505] text-white font-inter selection:bg-indigo-500/30">
       <header className="sticky top-0 z-50 w-full border-b border-white/5 glass">
-        <div className="mx-auto max-w-[1920px] px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1400px] px-4 py-4 sm:px-6 lg:px-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <Link
@@ -65,7 +65,7 @@ export function ActressView({ name, works }: ActressViewProps) {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1920px] px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-10">
         <MovieGrid
           movies={works}
           favorites={favorites}
