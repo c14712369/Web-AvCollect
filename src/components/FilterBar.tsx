@@ -10,7 +10,7 @@ interface FilterBarProps {
   onChange: (value: string) => void;
 }
 
-const translateOption = (opt: string) => {
+export const translateOption = (opt: string) => {
   const map: Record<string, string> = {
     'ActressMatched': '追蹤女優',
     'Recommended': '為你推薦',

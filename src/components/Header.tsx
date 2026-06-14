@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Heart, Plus, Loader2, Database, Calendar, Clock, Target, Sparkles, Settings } from 'lucide-react';
-import { FilterBar } from './FilterBar';
+import { LayoutGrid, Heart, Plus, Loader2, Database, Calendar, Clock, Target, Sparkles, Settings, Star } from 'lucide-react';
+import { CategoryDropdown } from './CategoryDropdown';
 import { SearchInput } from './SearchInput';
 import { ThemeToggle } from './ThemeToggle';
 import { LogoutButton } from './LogoutButton';
@@ -10,22 +10,15 @@ import { LogoutButton } from './LogoutButton';
 interface HeaderProps {
   searchQuery: string;
   onSearchChange: (v: string) => void;
-  sources: string[];
   categories: string[];
-  makers: string[];
-  themes: string[];
-  activeSource: string;
   activeCategory: string;
-  activeMaker: string;
-  activeTheme: string;
-  onSourceChange: (v: string) => void;
   onCategoryChange: (v: string) => void;
-  onMakerChange: (v: string) => void;
-  onThemeChange: (v: string) => void;
   showFavoritesOnly: boolean;
   onToggleFavoritesOnly: () => void;
   showRecommendedOnly: boolean;
   onToggleRecommendedOnly: () => void;
+  showFavActressOnly: boolean;
+  onToggleFavActressOnly: () => void;
   onAddMovie: () => void;
   isAdding: boolean;
   totalCount: number;
@@ -39,11 +32,10 @@ interface HeaderProps {
 export function Header(props: HeaderProps) {
   const {
     searchQuery, onSearchChange,
-    sources, categories, makers, themes,
-    activeSource, activeCategory, activeMaker, activeTheme,
-    onSourceChange, onCategoryChange, onMakerChange, onThemeChange,
+    categories, activeCategory, onCategoryChange,
     showFavoritesOnly, onToggleFavoritesOnly,
     showRecommendedOnly, onToggleRecommendedOnly,
+    showFavActressOnly, onToggleFavActressOnly,
     onAddMovie, isAdding, totalCount,
     onOpenImportExport,
     searchInputRef,
@@ -62,7 +54,7 @@ export function Header(props: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/5 glass">
-      <div className="mx-auto max-w-[1920px] px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1400px] px-4 py-4 sm:px-6 lg:px-10">
         <div className="flex flex-col space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center space-x-4">
@@ -89,84 +81,95 @@ export function Header(props: HeaderProps) {
             </div>
           </div>
 
-          <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 border-t border-white/5 pt-4">
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 w-full xl:pr-8 min-w-0">
-              <FilterBar label="來源" options={sources} selected={activeSource} onChange={onSourceChange} />
-              <FilterBar label="分類" options={categories} selected={activeCategory} onChange={onCategoryChange} />
-              <FilterBar label="廠商" options={makers} selected={activeMaker} onChange={onMakerChange} />
-              <FilterBar label="主題" options={themes} selected={activeTheme} onChange={onThemeChange} />
+          <div className="flex flex-wrap items-center gap-3 border-t border-white/5 pt-4">
+            <button
+              onClick={onAddMovie}
+              disabled={isAdding}
+              className="group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border glass border-white/5 text-white/80 hover:text-white hover:border-white/20 hover:bg-white/10 disabled:opacity-50"
+            >
+              {isAdding ? <Loader2 className="h-4 w-4 animate-spin text-indigo-400" /> : <Plus className="h-4 w-4 group-hover:scale-110 transition-transform text-indigo-400" />}
+              <span className="text-xs font-bold tracking-wide">新增收藏</span>
+            </button>
+            <div
+              role="radiogroup"
+              aria-label="排序方式"
+              className="flex items-center gap-0.5 rounded-full glass border border-white/5 p-0.5"
+            >
+              {sortOptions.map((opt) => {
+                const active = opt.key === sortBy;
+                return (
+                  <button
+                    key={opt.key}
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => pickSort(opt.key)}
+                    title={opt.label}
+                    className={
+                      active
+                        ? 'flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-500/30 to-violet-500/30 px-3 py-2 text-violet-100 shadow-inner ring-1 ring-violet-400/30 transition-all'
+                        : 'flex items-center gap-1.5 rounded-full px-3 py-2 text-white/50 transition-all hover:text-white hover:bg-white/5'
+                    }
+                  >
+                    {opt.icon}
+                    <span className="text-xs font-bold tracking-wide">{opt.label}</span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="flex items-center space-x-3 self-end xl:self-auto shrink-0">
-              <button
-                onClick={onAddMovie}
-                disabled={isAdding}
-                className="group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border glass border-white/5 text-white/80 hover:text-white hover:border-white/20 hover:bg-white/10 disabled:opacity-50"
-              >
-                {isAdding ? <Loader2 className="h-4 w-4 animate-spin text-indigo-400" /> : <Plus className="h-4 w-4 group-hover:scale-110 transition-transform text-indigo-400" />}
-                <span className="text-xs font-bold tracking-wide">新增收藏</span>
-              </button>
-              <div
-                role="radiogroup"
-                aria-label="排序方式"
-                className="flex items-center gap-0.5 rounded-full glass border border-white/5 p-0.5"
-              >
-                {sortOptions.map((opt) => {
-                  const active = opt.key === sortBy;
-                  return (
-                    <button
-                      key={opt.key}
-                      role="radio"
-                      aria-checked={active}
-                      onClick={() => pickSort(opt.key)}
-                      title={opt.label}
-                      className={
-                        active
-                          ? 'flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-500/30 to-violet-500/30 px-3 py-2 text-violet-100 shadow-inner ring-1 ring-violet-400/30 transition-all'
-                          : 'flex items-center gap-1.5 rounded-full px-3 py-2 text-white/50 transition-all hover:text-white hover:bg-white/5'
-                      }
-                    >
-                      {opt.icon}
-                      <span className="text-xs font-bold tracking-wide">{opt.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <button
-                onClick={onToggleRecommendedOnly}
-                className={`group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border ${
-                  showRecommendedOnly
-                    ? 'bg-violet-500/20 border-violet-500/50 text-violet-300 shadow-[0_0_20px_rgba(139,92,246,0.2)]'
-                    : 'glass border-white/5 text-white/50 hover:text-white hover:border-white/20 hover:bg-white/5'
-                }`}
-                title="只看口味契合度高的影片"
-              >
-                <Sparkles className={`h-4 w-4 transition-all duration-500 ${showRecommendedOnly ? 'scale-110' : 'group-hover:scale-110 group-hover:text-violet-400'}`} />
-                <span className="text-xs font-semibold tracking-wide">為你推薦</span>
-              </button>
-              <button
-                onClick={onOpenImportExport}
-                className="rounded-full glass border border-white/5 p-2.5 text-white/50 hover:text-white hover:border-white/20 transition-all duration-200"
-                aria-label="收藏匯入匯出"
-              >
-                <Database className="h-4 w-4" />
-              </button>
-              <button
-                onClick={onToggleFavoritesOnly}
-                className={`group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border ${
-                  showFavoritesOnly
-                    ? 'bg-red-500/20 border-red-500/50 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
-                    : 'glass border-white/5 text-white/50 hover:text-white hover:border-white/20 hover:bg-white/5'
-                }`}
-              >
-                <Heart className={`h-4 w-4 transition-all duration-500 ${showFavoritesOnly ? 'fill-red-500 scale-110' : 'group-hover:scale-110 group-hover:text-red-400'}`} />
-                <span className="text-xs font-semibold tracking-wide">收藏限定</span>
-              </button>
-              <div className="flex items-center space-x-2 rounded-full glass border-white/5 px-5 py-2.5">
-                <span className="text-xs font-medium text-white/30 uppercase tracking-tighter">總計</span>
-                <span className="text-sm font-bold text-indigo-400 font-mono">
-                  {totalCount.toString().padStart(2, '0')}
-                </span>
-              </div>
+            <button
+              onClick={onToggleRecommendedOnly}
+              className={`group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border ${
+                showRecommendedOnly
+                  ? 'bg-violet-500/20 border-violet-500/50 text-violet-300 shadow-[0_0_20px_rgba(139,92,246,0.2)]'
+                  : 'glass border-white/5 text-white/50 hover:text-white hover:border-white/20 hover:bg-white/5'
+              }`}
+              title="只看口味契合度高的影片"
+            >
+              <Sparkles className={`h-4 w-4 transition-all duration-500 ${showRecommendedOnly ? 'scale-110' : 'group-hover:scale-110 group-hover:text-violet-400'}`} />
+              <span className="text-xs font-semibold tracking-wide">為你推薦</span>
+            </button>
+            <button
+              onClick={onToggleFavActressOnly}
+              className={`group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border ${
+                showFavActressOnly
+                  ? 'bg-pink-500/20 border-pink-500/50 text-pink-300 shadow-[0_0_20px_rgba(236,72,153,0.2)]'
+                  : 'glass border-white/5 text-white/50 hover:text-white hover:border-white/20 hover:bg-white/5'
+              }`}
+              title="只看喜愛女優名單中的作品"
+            >
+              <Star className={`h-4 w-4 transition-all duration-500 ${showFavActressOnly ? 'fill-pink-400 scale-110' : 'group-hover:scale-110 group-hover:text-pink-400'}`} />
+              <span className="text-xs font-semibold tracking-wide">喜愛女優</span>
+            </button>
+            <button
+              onClick={onOpenImportExport}
+              className="rounded-full glass border border-white/5 p-2.5 text-white/50 hover:text-white hover:border-white/20 transition-all duration-200"
+              aria-label="收藏匯入匯出"
+            >
+              <Database className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onToggleFavoritesOnly}
+              className={`group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border ${
+                showFavoritesOnly
+                  ? 'bg-red-500/20 border-red-500/50 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
+                  : 'glass border-white/5 text-white/50 hover:text-white hover:border-white/20 hover:bg-white/5'
+              }`}
+            >
+              <Heart className={`h-4 w-4 transition-all duration-500 ${showFavoritesOnly ? 'fill-red-500 scale-110' : 'group-hover:scale-110 group-hover:text-red-400'}`} />
+              <span className="text-xs font-semibold tracking-wide">收藏限定</span>
+            </button>
+            <div className="flex items-center space-x-2 rounded-full glass border-white/5 px-5 py-2.5">
+              <span className="text-xs font-medium text-white/30 uppercase tracking-tighter">總計</span>
+              <span className="text-sm font-bold text-indigo-400 font-mono">
+                {totalCount.toString().padStart(2, '0')}
+              </span>
+            </div>
+            <div className="ml-auto">
+              <CategoryDropdown
+                options={categories}
+                selected={activeCategory}
+                onChange={onCategoryChange}
+              />
             </div>
           </div>
         </div>
