@@ -87,7 +87,8 @@ export const TASTE_THRESHOLDS = {
  * 與 AvCollect metadata.extractActress 規則一致，集中於此避免漂移。
  */
 export function extractActress(title: string): string | null {
-  const match = title.match(/(?:~|-|—|－|\s)([一-龥ぁ-んァ-ヶ]+)$/);
+  // 先 trim：來源標題尾端常帶多餘空白，會讓 `$` 對不上而抓不到女優名
+  const match = title.trim().match(/(?:~|-|—|－|\s)([一-龥ぁ-んァ-ヶ]+)$/);
   if (match && match[1].length >= 2 && match[1].length <= 6) {
     return match[1].trim();
   }

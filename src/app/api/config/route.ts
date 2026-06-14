@@ -23,11 +23,14 @@ const makerMapPatch = z.record(
   z.string().trim().min(1).max(40)
 );
 
+const actressArray = z.array(z.string().trim().min(1).max(40)).max(500);
+
 const schema = z.object({
   trackedTags: tagArray.optional(),
   blockedTags: tagArray.optional(),
   blockedIssuers: prefixArray.optional(),
   makerMap: makerMapPatch.optional(),
+  preferredActresses: actressArray.optional(),
 });
 
 /** 去除空白並去重（保序）。 */
@@ -48,10 +51,11 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const { trackedTags, blockedTags, blockedIssuers, makerMap } = parsed.data;
+    const { trackedTags, blockedTags, blockedIssuers, makerMap, preferredActresses } = parsed.data;
     if (trackedTags) await setConfigArray('tracked_tags', normalize(trackedTags));
     if (blockedTags) await setConfigArray('blocked_tags', normalize(blockedTags));
     if (blockedIssuers) await setConfigArray('blocked_issuers', normalizePrefixes(blockedIssuers));
+    if (preferredActresses) await setConfigArray('preferred_actresses', normalize(preferredActresses));
     if (makerMap) {
       const current = (await getConfig()).makerMap;
       const upperKeyed: Record<string, string> = {};

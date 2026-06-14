@@ -158,6 +158,10 @@ export interface TagSettings {
   suggestions: string[];
   /** 只出現在「未收藏」片裡（從沒進過你收藏）的常見標籤，供「加入黑名單」一鍵用。 */
   blockedSuggestions: string[];
+  /** 手動維護的喜愛女優名單（baseline 加分 + 牆面篩選用）。 */
+  preferredActresses: string[];
+  /** 收藏裡常出現、但尚未列入喜愛名單的女優，供「加入名單」一鍵用。 */
+  actressSuggestions: string[];
 }
 
 export const getTagSettings = async (): Promise<TagSettings> => {
@@ -171,6 +175,20 @@ export const getTagSettings = async (): Promise<TagSettings> => {
     const target = favCodes.has(row.code) ? favCounts : nonFavCounts;
     for (const t of themesOf(row)) target.set(t, (target.get(t) ?? 0) + 1);
   }
+
+  // 喜愛女優建議：你收藏裡常出現、但尚未列入手動名單的女優
+  const prefActressSet = new Set(cfg.preferredActresses);
+  const actressCounts = new Map<string, number>();
+  for (const row of rows) {
+    if (!favCodes.has(row.code)) continue;
+    const a = extractActress(row.title);
+    if (a) actressCounts.set(a, (actressCounts.get(a) ?? 0) + 1);
+  }
+  const actressSuggestions = [...actressCounts.entries()]
+    .filter(([a]) => !prefActressSet.has(a))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([a]) => a);
 
   const tracked = new Set(cfg.trackedTags);
   const blocked = new Set(cfg.blockedTags);
@@ -197,5 +215,7 @@ export const getTagSettings = async (): Promise<TagSettings> => {
     makerMap: cfg.makerMap,
     suggestions,
     blockedSuggestions,
+    preferredActresses: cfg.preferredActresses,
+    actressSuggestions,
   };
 };
