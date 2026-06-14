@@ -8,6 +8,9 @@ const ALLOWED_HOSTS = [
   'missav.com',
   'fourhoi.com',
   'eightcdn.com',
+  'avking.xyz',
+  'supjav.com',
+  'javrate.com',
 ];
 
 export async function GET(request: Request) {

@@ -15,6 +15,12 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '**.fourhoi.com' },
       { protocol: 'https', hostname: 'eightcdn.com' },
       { protocol: 'https', hostname: '**.eightcdn.com' },
+      { protocol: 'https', hostname: 'avking.xyz' },
+      { protocol: 'https', hostname: '**.avking.xyz' },
+      { protocol: 'https', hostname: 'supjav.com' },
+      { protocol: 'https', hostname: '**.supjav.com' },
+      { protocol: 'https', hostname: 'javrate.com' },
+      { protocol: 'https', hostname: '**.javrate.com' },
     ],
   },
 };
