@@ -39,10 +39,15 @@ export async function GET(request: Request) {
   }
 
   try {
+    let referer = 'https://missav.com/';
+    if (parsed.hostname.includes('jable')) referer = 'https://jable.tv/';
+    else if (parsed.hostname.includes('javrate') || parsed.hostname.includes('avking')) referer = 'https://javrate.com/';
+    else if (parsed.hostname.includes('supjav')) referer = 'https://supjav.com/';
+    
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://missav.com/',
+        'Referer': referer,
         'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
       },
     });
