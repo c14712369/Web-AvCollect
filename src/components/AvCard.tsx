@@ -40,7 +40,7 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
       onClick={() => onSelect(movie)}
     >
       {/* Image Container - 16:9 寬幅封面（仿 Jable）；用 cover 填滿整個卡片，超出範圍裁切不留黑邊 */}
-      <div className="relative aspect-video w-full overflow-hidden bg-zinc-900">
+      <div className="relative aspect-[16/9] w-full overflow-hidden bg-zinc-900">
         {imgError ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-indigo-900/40 via-zinc-900 to-violet-900/30 p-4">
             <ImageOff className="h-6 w-6 text-white/20 mb-2" />

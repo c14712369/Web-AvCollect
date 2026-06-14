@@ -14,7 +14,7 @@ export function Skeleton({ className }: { className?: string }) {
 export function CardSkeleton() {
   return (
     <div className="flex flex-col gap-2">
-      <Skeleton className="aspect-video w-full" />
+      <Skeleton className="aspect-[16/9] w-full" />
       <Skeleton className="h-3 w-12" />
       <Skeleton className="h-4 w-full" />
       <div className="flex gap-1">
