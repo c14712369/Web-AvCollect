@@ -25,6 +25,8 @@ jobs:
         env:
           TURSO_DATABASE_URL: file:./local.db
           TURSO_AUTH_TOKEN: ''
+          # 僅供 build 期 env 驗證（zod min(8)）通過，非真實密鑰
+          APP_SECRET: ci-dummy-secret
         run: |
           npm run db:migrate
           npm run build
