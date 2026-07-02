@@ -39,12 +39,12 @@ const enrich = (row: typeof movies.$inferSelect): Movie => ({
   releaseDate: row.releaseDate ?? null,
   maker: extractMaker(row.code),
   themes: themesOf(row),
-  actress: extractActress(row.title),
+  actress: row.actress ?? extractActress(row.title),
 });
 
 const featuresOf = (row: typeof movies.$inferSelect): MovieFeatures => ({
   issuer: toIssuer(row.code),
-  actress: extractActress(row.title),
+  actress: row.actress ?? extractActress(row.title),
   themes: themesOf(row),
 });
 

@@ -10,6 +10,7 @@ export const movies = sqliteTable('movies', {
   category: text('category').notNull(),
   releaseDate: text('release_date'), // ISO YYYY-MM-DD，可為 null
   tags: text('tags'), // JSON 字串 string[]（詳情頁抓的真實類型）；尚未 enrich 或非支援來源為 null
+  actress: text('actress'), // 結構化女優名（詳情頁抓的）；舊資料或列表頁來源為 null → fallback regex
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),

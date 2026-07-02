@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
 import { insertMovie, listMovies, deleteMovie } from '@/lib/db/queries';
 import { addMovieSchema } from '@/lib/validators';
-import { extractTagsBySource } from '@/lib/scrape/detail-tags';
+import { extractTagsBySource, extractActressBySource } from '@/lib/scrape/detail-tags';
 
 const BROWSER_HEADERS: Record<string, string> = {
   'User-Agent':
@@ -141,6 +141,9 @@ export async function POST(req: Request) {
     const genres = extractTagsBySource(source, $);
     if (genres.length > 0) tags = JSON.stringify(genres);
 
+    // 從結構化欄位抓女優名（比 regex 從標題猜可靠得多）
+    const actress = extractActressBySource(source, $);
+
     const movie = await insertMovie({
       code,
       title,
@@ -149,6 +152,7 @@ export async function POST(req: Request) {
       source,
       category: '使用者新增',
       tags,
+      actress,
     });
 
     if (!movie) {

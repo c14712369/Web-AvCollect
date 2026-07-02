@@ -50,3 +50,50 @@ export function extractTagsBySource(source: string, $: CheerioAPI): string[] {
   if (source === 'SupJav') return supjav($);
   return [];
 }
+
+// ─── 結構化女優名萃取 ──────────────────────────────────────
+
+/** MissAV：資訊面板「女優:」行的 a[href*="/actresses/"] 連結文字。 */
+function missavActress($: CheerioAPI): string | null {
+  let name: string | null = null;
+  $('span').each((_, el) => {
+    if ($(el).text().trim() === '女優:') {
+      const link = $(el).parent().find('a[href*="/actresses/"]').first();
+      const text = link.text().trim();
+      if (text) name = text;
+      return false;
+    }
+  });
+  return name;
+}
+
+/** Jable：.info-header .models a 連結文字。 */
+function jableActress($: CheerioAPI): string | null {
+  const text = $('.models a').first().text().trim();
+  return text || null;
+}
+
+/** Javrate：a[href*="/av-idol/"] 連結文字（排除導覽列共用連結）。 */
+function javrateActress($: CheerioAPI): string | null {
+  const text = $('a[href*="/av-idol/"]').first().text().trim();
+  return text || null;
+}
+
+/** SupJav：.post-meta a[href*="/actress/"] 連結文字。 */
+function supjavActress($: CheerioAPI): string | null {
+  const text = $('a[href*="/actress/"]').first().text().trim();
+  return text || null;
+}
+
+/**
+ * 依來源從詳情頁的結構化欄位萃取女優名；抓不到回 null。
+ * 比 regex 從標題猜更可靠：MissAV 中文翻譯標題常不以女優名結尾。
+ */
+export function extractActressBySource(source: string, $: CheerioAPI): string | null {
+  if (source === 'MissAV') return missavActress($);
+  if (source === 'Jable') return jableActress($);
+  if (source === 'Javrate') return javrateActress($);
+  if (source === 'SupJav') return supjavActress($);
+  return null;
+}
+
