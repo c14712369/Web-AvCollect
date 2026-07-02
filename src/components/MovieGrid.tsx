@@ -16,6 +16,7 @@ interface MovieGridProps {
   pageSize?: number;
   /** 此值變動時自動跳回第一頁（用來在篩選/搜尋改變時 reset）。 */
   resetKey?: string;
+  onDeleteUpcoming?: (code: string) => void;
 }
 
 export function MovieGrid({
@@ -25,6 +26,7 @@ export function MovieGrid({
   onSelectMovie,
   pageSize = 24,
   resetKey,
+  onDeleteUpcoming,
 }: MovieGridProps) {
   const [page, setPage] = useState(1);
 
@@ -87,6 +89,7 @@ export function MovieGrid({
                 favorited={favorites.includes(movie.code)}
                 onToggleFavorite={onToggleFavorite}
                 onSelect={onSelectMovie}
+                onDeleteUpcoming={onDeleteUpcoming}
               />
             </motion.div>
           ))}

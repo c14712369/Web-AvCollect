@@ -14,15 +14,25 @@ import { ScoreBreakdown } from './ScoreBreakdown';
 interface Props {
   movie: Movie | null;
   onClose: () => void;
+  onDeleteUpcoming?: (code: string) => void;
 }
 
-export function MovieDetailModal({ movie, onClose }: Props) {
+export function MovieDetailModal({ movie, onClose, onDeleteUpcoming }: Props) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { mutate: deleteMovie, isPending: isDeleting } = useDeleteMovie();
 
   const handleDelete = () => {
+    if (!movie) return;
+    // 預售新片走專用刪除流程
+    if (movie.category === '預售新片' && onDeleteUpcoming) {
+      if (window.confirm('確定要刪除這部預售新片嗎？')) {
+        onDeleteUpcoming(movie.code);
+        onClose();
+      }
+      return;
+    }
     if (window.confirm('確定要刪除這部影片嗎？')) {
-      if (movie) deleteMovie(movie.code, { onSuccess: onClose });
+      deleteMovie(movie.code, { onSuccess: onClose });
     }
   };
 
@@ -96,7 +106,7 @@ export function MovieDetailModal({ movie, onClose }: Props) {
                   unoptimized
                   referrerPolicy="no-referrer"
                   onError={handleImgError}
-                  className="object-cover"
+                  className={movie.category === '預售新片' ? "object-contain" : "object-cover"}
                   sizes="(max-width: 768px) 100vw, 672px"
                 />
               )}
@@ -107,14 +117,17 @@ export function MovieDetailModal({ movie, onClose }: Props) {
                 <span className="inline-flex rounded bg-indigo-500/20 px-2 py-1 text-xs font-black tracking-tighter text-indigo-300 border border-indigo-500/30">
                   {movie.code}
                 </span>
-                <button
-                  onClick={() => toggleFavorite(movie.code)}
-                  className="rounded-full bg-white/5 p-2 border border-white/10 hover:bg-white/10"
-                >
-                  <Heart
-                    className={`h-4 w-4 ${isFavorite(movie.code) ? 'fill-red-500 text-red-500' : 'text-white/60'}`}
-                  />
-                </button>
+                {/* 預售新片時隱藏收藏按鈕 */}
+                {movie.category !== '預售新片' && (
+                  <button
+                    onClick={() => toggleFavorite(movie.code)}
+                    className="rounded-full bg-white/5 p-2 border border-white/10 hover:bg-white/10"
+                  >
+                    <Heart
+                      className={`h-4 w-4 ${isFavorite(movie.code) ? 'fill-red-500 text-red-500' : 'text-white/60'}`}
+                    />
+                  </button>
+                )}
               </div>
               
               <h2 className="text-lg font-bold leading-snug text-white">{movie.title}</h2>
@@ -129,7 +142,7 @@ export function MovieDetailModal({ movie, onClose }: Props) {
                   className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition hover:shadow-indigo-500/50 active:scale-95"
                 >
                   <ExternalLink className="h-4 w-4" />
-                  前往觀看
+                  {movie.category === '預售新片' ? '前往官網' : '前往觀看'}
                 </a>
                 <button
                   onClick={handleDelete}

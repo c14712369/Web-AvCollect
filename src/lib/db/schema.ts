@@ -41,7 +41,23 @@ export const appConfig = sqliteTable('app_config', {
     .default(sql`(unixepoch())`),
 });
 
+// 預售新片（S1 / Moodyz 等）追蹤表
+export const upcomingMovies = sqliteTable('upcoming_movies', {
+  code: text('code').primaryKey(),
+  title: text('title').notNull(),
+  url: text('url').notNull(),
+  imageUrl: text('image_url').notNull(),
+  source: text('source').notNull(),
+  actress: text('actress').notNull(),
+  releaseDate: text('release_date'),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
 export type MovieRow = typeof movies.$inferSelect;
 export type MovieInsert = typeof movies.$inferInsert;
 export type FavoriteRow = typeof favorites.$inferSelect;
 export type AppConfigRow = typeof appConfig.$inferSelect;
+export type UpcomingMovieRow = typeof upcomingMovies.$inferSelect;
+export type UpcomingMovieInsert = typeof upcomingMovies.$inferInsert;

@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Heart, ImageOff, Target } from 'lucide-react';
+import { Heart, ImageOff, Target, Trash2 } from 'lucide-react';
 import { Movie } from '@/types/av';
 import { upgradeImageUrl } from '@/lib/utils';
 
@@ -12,9 +12,10 @@ interface AvCardProps {
   favorited: boolean;
   onToggleFavorite: (code: string) => void;
   onSelect: (movie: Movie) => void;
+  onDeleteUpcoming?: (code: string) => void;
 }
 
-export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavorite, onSelect }) => {
+export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavorite, onSelect, onDeleteUpcoming }) => {
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onToggleFavorite(movie.code);
@@ -39,8 +40,8 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
       className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] cursor-pointer"
       onClick={() => onSelect(movie)}
     >
-      {/* Image Container - 16:9 寬幅封面（仿 Jable）；用 cover 填滿整個卡片，超出範圍裁切不留黑邊 */}
-      <div className="relative aspect-[16/9] w-full overflow-hidden bg-zinc-900">
+      {/* Image Container - 16:9 寬幅封面（預售片為 3:4 直式）；用 cover 填滿整個卡片，超出範圍裁切不留黑邊 */}
+      <div className={`relative w-full overflow-hidden bg-zinc-900 ${movie.category === '預售新片' ? 'aspect-[3/4]' : 'aspect-[16/9]'}`}>
         {imgError ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-indigo-900/40 via-zinc-900 to-violet-900/30 p-4">
             <ImageOff className="h-6 w-6 text-white/20 mb-2" />
@@ -65,17 +66,31 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/90 via-transparent to-transparent opacity-60 transition-opacity group-hover:opacity-40" />
 
-        {/* Favorite Button */}
-        <motion.button
-          whileHover={{ scale: 1.15 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={handleFavoriteClick}
-          className="absolute top-2 left-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/5 transition-colors hover:bg-black/60"
-        >
-          <Heart
-            className={`h-3.5 w-3.5 transition-colors ${favorited ? 'fill-red-500 text-red-500' : 'text-white/70'}`}
-          />
-        </motion.button>
+        {/* 收藏 / 預售新片刪除按鈕 */}
+        {movie.category === '預售新片' && onDeleteUpcoming ? (
+          <motion.button
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteUpcoming(movie.code);
+            }}
+            className="absolute top-2 left-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/5 transition-colors hover:bg-rose-500/40"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+          </motion.button>
+        ) : (
+          <motion.button
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleFavoriteClick}
+            className="absolute top-2 left-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/5 transition-colors hover:bg-black/60"
+          >
+            <Heart
+              className={`h-3.5 w-3.5 transition-colors ${favorited ? 'fill-red-500 text-red-500' : 'text-white/70'}`}
+            />
+          </motion.button>
+        )}
 
         {/* 口味契合度徽章（僅 high / medium 顯示，避免雜訊） */}
         {movie.matchTier && movie.matchTier !== 'low' && movie.matchScore != null && (
@@ -95,6 +110,17 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
 
       {/* Content Area */}
       <div className="flex flex-col gap-1.5 p-3">
+        {/* 預售新片：顯示番號與預計發售日 */}
+        {movie.category === '預售新片' && (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex rounded bg-indigo-500/20 px-1.5 py-0.5 text-xs font-black tracking-tighter text-indigo-300 border border-indigo-500/30">
+              {movie.code}
+            </span>
+            {movie.releaseDate && (
+              <span className="text-xs font-semibold text-white/40">{movie.releaseDate} 發售</span>
+            )}
+          </div>
+        )}
         <h3 className="truncate text-sm font-semibold leading-snug text-white/90 group-hover:text-white transition-colors" title={movie.title}>
           {movie.title}
         </h3>

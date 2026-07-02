@@ -18,6 +18,8 @@ interface HeaderProps {
   onToggleRecommendedOnly: () => void;
   showFavActressOnly: boolean;
   onToggleFavActressOnly: () => void;
+  showUpcomingOnly: boolean;
+  onToggleUpcomingOnly: () => void;
   onAddMovie: () => void;
   isAdding: boolean;
   totalCount: number;
@@ -35,6 +37,7 @@ export function Header(props: HeaderProps) {
     showFavoritesOnly, onToggleFavoritesOnly,
     showRecommendedOnly, onToggleRecommendedOnly,
     showFavActressOnly, onToggleFavActressOnly,
+    showUpcomingOnly, onToggleUpcomingOnly,
     onAddMovie, isAdding, totalCount,
     onOpenImportExport,
     searchInputRef,
@@ -136,6 +139,18 @@ export function Header(props: HeaderProps) {
             >
               <Star className={`h-4 w-4 transition-all duration-500 ${showFavActressOnly ? 'fill-pink-400 scale-110' : 'group-hover:scale-110 group-hover:text-pink-400'}`} />
               <span className="text-xs font-semibold tracking-wide">喜愛女優</span>
+            </button>
+            <button
+              onClick={onToggleUpcomingOnly}
+              className={`group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border ${
+                showUpcomingOnly
+                  ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300 shadow-[0_0_20px_rgba(99,102,241,0.2)]'
+                  : 'glass border-white/5 text-white/50 hover:text-white hover:border-white/20 hover:bg-white/5'
+              }`}
+              title="只看追蹤的官網預售新片"
+            >
+              <Calendar className={`h-4 w-4 transition-all duration-500 ${showUpcomingOnly ? 'scale-110' : 'group-hover:scale-110 group-hover:text-indigo-400'}`} />
+              <span className="text-xs font-semibold tracking-wide">預售新片</span>
             </button>
             <button
               onClick={onOpenImportExport}

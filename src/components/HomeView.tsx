@@ -10,6 +10,7 @@ import { AddMovieDialog } from './AddMovieDialog';
 import { useFavorites } from '@/hooks/useFavorites';
 import { usePreferredActresses } from '@/hooks/usePreferredActresses';
 import { useAddMovie, useMovies } from '@/hooks/useMovies';
+import { useUpcomingMovies, useDeleteUpcomingMovie } from '@/hooks/useUpcomingMovies';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 interface HomeViewProps {
@@ -27,12 +28,19 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [showRecommendedOnly, setShowRecommendedOnly] = useState(false);
   const [showFavActressOnly, setShowFavActressOnly] = useState(false);
+  const [showUpcomingOnly, setShowUpcomingOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'added' | 'release' | 'match'>('added');
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [importExportOpen, setImportExportOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-
+ 
+  // 預售新片 (改與 showUpcomingOnly 連動)
+  const { data: upcomingMovies = [], isLoading: upcomingLoading } = useUpcomingMovies({
+    enabled: showUpcomingOnly,
+  });
+  const deleteUpcoming = useDeleteUpcomingMovie();
+ 
   useKeyboardShortcuts([
     {
       key: 'k',
@@ -52,19 +60,48 @@ export function HomeView({ initialMovies }: HomeViewProps) {
       key: 'a',
       handler: () => setShowFavActressOnly((v) => !v),
     },
+    {
+      key: 'u',
+      handler: () => setShowUpcomingOnly((v) => !v),
+    },
   ]);
-
+ 
   const categories = useMemo(
     () => ['全部', ...Array.from(new Set(movies.map((m) => m.category)))],
     [movies]
   );
-
+ 
   const favActressSet = useMemo(
     () => new Set(preferredActresses.map((a) => a.trim()).filter(Boolean)),
     [preferredActresses]
   );
-
+ 
   const filtered = useMemo(() => {
+    // 預售新片走獨立來源，直接轉換為 Movie 格式
+    if (showUpcomingOnly) {
+      return upcomingMovies
+        .filter((m) => {
+          const q = searchQuery.toLowerCase();
+          return (
+            m.title.toLowerCase().includes(q) ||
+            m.code.toLowerCase().includes(q) ||
+            (m.actress ?? '').toLowerCase().includes(q)
+          );
+        })
+        .map((m) => ({
+          code: m.code,
+          title: m.title,
+          url: m.url,
+          imageUrl: m.imageUrl,
+          source: m.source,
+          category: '預售新片',
+          releaseDate: m.releaseDate ?? null,
+          maker: '',
+          themes: [],
+          actress: m.actress,
+        })) as Movie[];
+    }
+ 
     const result = movies.filter((m) => {
       const q = searchQuery.toLowerCase();
       const matchesSearch =
@@ -81,7 +118,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         matchesRecommended && matchesFavActress
       );
     });
-
+ 
     if (sortBy === 'release') {
       // 有 releaseDate 的排前面（DESC），無的排最後
       return [...result].sort((a, b) => {
@@ -97,10 +134,10 @@ export function HomeView({ initialMovies }: HomeViewProps) {
     }
     return result; // 'added' = DB 預設順序 (created_at DESC)
   }, [
-    movies, searchQuery, activeCategory, showFavoritesOnly,
-    showRecommendedOnly, showFavActressOnly, favActressSet, isFavorite, sortBy,
+    movies, upcomingMovies, searchQuery, activeCategory, showFavoritesOnly,
+    showRecommendedOnly, showFavActressOnly, showUpcomingOnly, favActressSet, isFavorite, sortBy,
   ]);
-
+ 
   // 篩選/搜尋/排序條件的指紋；變動時 MovieGrid 自動回到第一頁。
   // 刻意不含 favorites，避免單顆收藏 toggle 把分頁彈回第一頁。
   const pageResetKey = useMemo(
@@ -111,9 +148,10 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         showFavoritesOnly,
         showRecommendedOnly,
         showFavActressOnly,
+        showUpcomingOnly,
         sortBy,
       ]),
-    [searchQuery, activeCategory, showFavoritesOnly, showRecommendedOnly, showFavActressOnly, sortBy]
+    [searchQuery, activeCategory, showFavoritesOnly, showRecommendedOnly, showFavActressOnly, showUpcomingOnly, sortBy]
   );
 
   const handleSubmitAdd = async (url: string) => {
@@ -134,6 +172,8 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         onToggleRecommendedOnly={() => setShowRecommendedOnly((v) => !v)}
         showFavActressOnly={showFavActressOnly}
         onToggleFavActressOnly={() => setShowFavActressOnly((v) => !v)}
+        showUpcomingOnly={showUpcomingOnly}
+        onToggleUpcomingOnly={() => setShowUpcomingOnly((v) => !v)}
         onAddMovie={() => setAddOpen(true)}
         isAdding={addMovie.isPending}
         totalCount={filtered.length}
@@ -152,11 +192,13 @@ export function HomeView({ initialMovies }: HomeViewProps) {
           onToggleFavorite={toggleFavorite}
           onSelectMovie={setSelectedMovie}
           resetKey={pageResetKey}
+          onDeleteUpcoming={(code) => deleteUpcoming.mutate(code)}
         />
       </div>
       <MovieDetailModal
         movie={selectedMovie}
         onClose={() => setSelectedMovie(null)}
+        onDeleteUpcoming={(code) => deleteUpcoming.mutate(code)}
       />
       <ImportExportDialog
         open={importExportOpen}
