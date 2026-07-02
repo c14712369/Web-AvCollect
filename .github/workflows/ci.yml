@@ -13,7 +13,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+          # 不開 npm 快取：本機全域 gitignore 排除 package-lock.json，
+          # repo 無 lockfile 時 cache: npm 會在 setup-node 直接失敗
+
       - run: npm install --no-audit --no-fund
       - name: Type check
         run: npx tsc --noEmit
