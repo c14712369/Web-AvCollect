@@ -113,9 +113,21 @@ export function HomeView({ initialMovies }: HomeViewProps) {
       const matchesRecommended = !showRecommendedOnly || m.matchTier === 'high';
       const matchesFavActress =
         !showFavActressOnly ||
-        (m.actress
-          ? favActressSet.has(m.actress.toLowerCase())
-          : preferredActresses.some((name) => m.title.toLowerCase().includes(name.toLowerCase())));
+        (!!m.actress &&
+          m.actress
+            .split(/[\s,，、・]+/)
+            .map((a) => a.toLowerCase().trim())
+            .filter(Boolean)
+            .some((a) => favActressSet.has(a))) ||
+        preferredActresses.some((name) => {
+          const isCjk = /^[一-龥ぁ-んァ-ヶ]+$/.test(name);
+          if (isCjk) {
+            return m.title.toLowerCase().includes(name.toLowerCase());
+          }
+          const escaped = name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          const regex = new RegExp('\\b' + escaped.replace(/\s+/g, '\\s+') + '\\b', 'i');
+          return regex.test(m.title);
+        });
       return (
         matchesSearch && matchesCategory && matchesFav &&
         matchesRecommended && matchesFavActress
