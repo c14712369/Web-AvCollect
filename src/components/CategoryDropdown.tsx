@@ -9,9 +9,10 @@ interface CategoryDropdownProps {
   options: string[];
   selected: string;
   onChange: (value: string) => void;
+  label?: string;
 }
 
-export function CategoryDropdown({ options, selected, onChange }: CategoryDropdownProps) {
+export function CategoryDropdown({ options, selected, onChange, label }: CategoryDropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -44,7 +45,7 @@ export function CategoryDropdown({ options, selected, onChange }: CategoryDropdo
         }`}
       >
         <Filter className="h-4 w-4 shrink-0" />
-        <span className="text-xs font-bold tracking-wide">分類</span>
+        <span className="text-xs font-bold tracking-wide">{label || '分類'}</span>
         <span className="max-w-[8rem] truncate text-xs font-semibold text-white/80">
           {translateOption(selected)}
         </span>

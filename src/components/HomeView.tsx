@@ -11,6 +11,7 @@ import { usePreferredActresses } from '@/hooks/usePreferredActresses';
 import { useAddMovie, useMovies } from '@/hooks/useMovies';
 import { useUpcomingMovies, useDeleteUpcomingMovie } from '@/hooks/useUpcomingMovies';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { matchActress } from '@/lib/actress-matcher';
 
 interface HomeViewProps {
   initialMovies: Movie[];
@@ -24,6 +25,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('全部');
+  const [activeActress, setActiveActress] = useState('全部');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [showRecommendedOnly, setShowRecommendedOnly] = useState(false);
   const [showFavActressOnly, setShowFavActressOnly] = useState(false);
@@ -68,6 +70,31 @@ export function HomeView({ initialMovies }: HomeViewProps) {
     () => ['全部', ...Array.from(new Set(movies.map((m) => m.category)))],
     [movies]
   );
+
+  const favoriteMovies = useMemo(() => {
+    return movies.filter((m) => isFavorite(m.code));
+  }, [movies, isFavorite]);
+
+  const actressesInFavorites = useMemo(() => {
+    const set = new Set<string>();
+    favoriteMovies.forEach((m) => {
+      if (!m.actress) return;
+      m.actress.split(/[\s,，、・]+/).forEach((a) => {
+        const clean = a.trim();
+        if (clean) set.add(clean);
+      });
+    });
+    return set;
+  }, [favoriteMovies]);
+
+  const availableFavActresses = useMemo(() => {
+    const matched = preferredActresses.filter((prefName) => {
+      return Array.from(actressesInFavorites).some((act) => {
+        return matchActress(prefName, act);
+      });
+    });
+    return ['全部', ...matched];
+  }, [preferredActresses, actressesInFavorites]);
  
   const favActressSet = useMemo(
     () => new Set(preferredActresses.map((a) => a.trim().toLowerCase()).filter(Boolean)),
@@ -114,8 +141,9 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         m.title.toLowerCase().includes(q) ||
         m.code.toLowerCase().includes(q) ||
         (m.actress ?? '').toLowerCase().includes(q);
-      const matchesCategory = activeCategory === '全部' || m.category === activeCategory;
+      const matchesCategory = showFavoritesOnly || activeCategory === '全部' || m.category === activeCategory;
       const matchesFav = !showFavoritesOnly || isFavorite(m.code);
+      const matchesFavActressInFavorites = !showFavoritesOnly || activeActress === '全部' || (!!m.actress && matchActress(activeActress, m.actress));
       const matchesRecommended = !showRecommendedOnly || m.matchTier === 'high';
       const matchesFavActress =
         !showFavActressOnly ||
@@ -136,7 +164,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         });
       return (
         matchesSearch && matchesCategory && matchesFav &&
-        matchesRecommended && matchesFavActress
+        matchesRecommended && matchesFavActress && matchesFavActressInFavorites
       );
     });
  
@@ -155,7 +183,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
     }
     return result; // 'added' = DB 預設順序 (created_at DESC)
   }, [
-    movies, upcomingMovies, searchQuery, activeCategory, showFavoritesOnly,
+    movies, upcomingMovies, searchQuery, activeCategory, activeActress, showFavoritesOnly,
     showRecommendedOnly, showFavActressOnly, showUpcomingOnly, favActressSet, isFavorite, sortBy,
   ]);
  
@@ -166,18 +194,20 @@ export function HomeView({ initialMovies }: HomeViewProps) {
       JSON.stringify([
         searchQuery,
         activeCategory,
+        activeActress,
         showFavoritesOnly,
         showRecommendedOnly,
         showFavActressOnly,
         showUpcomingOnly,
         sortBy,
       ]),
-    [searchQuery, activeCategory, showFavoritesOnly, showRecommendedOnly, showFavActressOnly, showUpcomingOnly, sortBy]
+    [searchQuery, activeCategory, activeActress, showFavoritesOnly, showRecommendedOnly, showFavActressOnly, showUpcomingOnly, sortBy]
   );
-
+ 
   const handleResetFilters = () => {
     setSearchQuery('');
     setActiveCategory('全部');
+    setActiveActress('全部');
     setShowFavoritesOnly(false);
     setShowRecommendedOnly(false);
     setShowFavActressOnly(false);
@@ -194,15 +224,20 @@ export function HomeView({ initialMovies }: HomeViewProps) {
       <Header
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        categories={categories}
-        activeCategory={activeCategory}
-        onCategoryChange={setActiveCategory}
+        categories={showFavoritesOnly ? availableFavActresses : categories}
+        activeCategory={showFavoritesOnly ? activeActress : activeCategory}
+        onCategoryChange={showFavoritesOnly ? setActiveActress : setActiveCategory}
+        dropdownLabel={showFavoritesOnly ? '女優' : '分類'}
         showFavoritesOnly={showFavoritesOnly}
         onToggleFavoritesOnly={() => {
-          setShowFavoritesOnly((v) => !v);
+          const next = !showFavoritesOnly;
+          setShowFavoritesOnly(next);
           setShowRecommendedOnly(false);
           setShowFavActressOnly(false);
           setShowUpcomingOnly(false);
+          if (!next) {
+            setActiveActress('全部');
+          }
         }}
         showRecommendedOnly={showRecommendedOnly}
         onToggleRecommendedOnly={() => {
