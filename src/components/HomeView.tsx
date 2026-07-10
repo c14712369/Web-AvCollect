@@ -72,7 +72,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   );
  
   const favActressSet = useMemo(
-    () => new Set(preferredActresses.map((a) => a.trim()).filter(Boolean)),
+    () => new Set(preferredActresses.map((a) => a.trim().toLowerCase()).filter(Boolean)),
     [preferredActresses]
   );
  
@@ -112,7 +112,10 @@ export function HomeView({ initialMovies }: HomeViewProps) {
       const matchesFav = !showFavoritesOnly || isFavorite(m.code);
       const matchesRecommended = !showRecommendedOnly || m.matchTier === 'high';
       const matchesFavActress =
-        !showFavActressOnly || (!!m.actress && favActressSet.has(m.actress));
+        !showFavActressOnly ||
+        (m.actress
+          ? favActressSet.has(m.actress.toLowerCase())
+          : preferredActresses.some((name) => m.title.toLowerCase().includes(name.toLowerCase())));
       return (
         matchesSearch && matchesCategory && matchesFav &&
         matchesRecommended && matchesFavActress
