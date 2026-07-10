@@ -10,9 +10,10 @@ interface CategoryDropdownProps {
   selected: string;
   onChange: (value: string) => void;
   label?: string;
+  getLabel?: (value: string) => string;
 }
 
-export function CategoryDropdown({ options, selected, onChange, label }: CategoryDropdownProps) {
+export function CategoryDropdown({ options, selected, onChange, label, getLabel }: CategoryDropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -47,7 +48,7 @@ export function CategoryDropdown({ options, selected, onChange, label }: Categor
         <Filter className="h-4 w-4 shrink-0" />
         <span className="text-xs font-bold tracking-wide">{label || '分類'}</span>
         <span className="max-w-[8rem] truncate text-xs font-semibold text-white/80">
-          {translateOption(selected)}
+          {getLabel ? getLabel(selected) : translateOption(selected)}
         </span>
         <ChevronDown
           className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
@@ -81,7 +82,7 @@ export function CategoryDropdown({ options, selected, onChange, label }: Categor
                         : 'text-white/70 hover:bg-white/5 hover:text-white'
                     }`}
                   >
-                    <span className="truncate">{translateOption(opt)}</span>
+                    <span className="truncate">{getLabel ? getLabel(opt) : translateOption(opt)}</span>
                     {active && <Check className="h-4 w-4 shrink-0 text-indigo-300" />}
                   </button>
                 </li>

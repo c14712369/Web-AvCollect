@@ -75,26 +75,32 @@ export function HomeView({ initialMovies }: HomeViewProps) {
     return movies.filter((m) => isFavorite(m.code));
   }, [movies, isFavorite]);
 
-  const actressesInFavorites = useMemo(() => {
-    const set = new Set<string>();
+  const actressCountsInFavorites = useMemo(() => {
+    const counts: Record<string, number> = {};
     favoriteMovies.forEach((m) => {
       if (!m.actress) return;
       m.actress.split(/[\s,，、・]+/).forEach((a) => {
         const clean = a.trim();
-        if (clean) set.add(clean);
+        if (clean) {
+          counts[clean] = (counts[clean] || 0) + 1;
+        }
       });
     });
-    return set;
+    return counts;
   }, [favoriteMovies]);
 
-  const availableFavActresses = useMemo(() => {
-    const matched = preferredActresses.filter((prefName) => {
-      return Array.from(actressesInFavorites).some((act) => {
-        return matchActress(prefName, act);
-      });
+  const availableActressesOrdered = useMemo(() => {
+    const names = Object.keys(actressCountsInFavorites);
+    names.sort((a, b) => {
+      const countA = actressCountsInFavorites[a];
+      const countB = actressCountsInFavorites[b];
+      if (countB !== countA) {
+        return countB - countA;
+      }
+      return a.localeCompare(b);
     });
-    return ['全部', ...matched];
-  }, [preferredActresses, actressesInFavorites]);
+    return ['全部', ...names];
+  }, [actressCountsInFavorites]);
  
   const favActressSet = useMemo(
     () => new Set(preferredActresses.map((a) => a.trim().toLowerCase()).filter(Boolean)),
@@ -224,10 +230,11 @@ export function HomeView({ initialMovies }: HomeViewProps) {
       <Header
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        categories={showFavoritesOnly ? availableFavActresses : categories}
+        categories={showFavoritesOnly ? availableActressesOrdered : categories}
         activeCategory={showFavoritesOnly ? activeActress : activeCategory}
         onCategoryChange={showFavoritesOnly ? setActiveActress : setActiveCategory}
         dropdownLabel={showFavoritesOnly ? '女優' : '分類'}
+        dropdownGetLabel={showFavoritesOnly ? (val) => (val === '全部' ? '全部' : `${val} (${actressCountsInFavorites[val] || 0})`) : undefined}
         showFavoritesOnly={showFavoritesOnly}
         onToggleFavoritesOnly={() => {
           const next = !showFavoritesOnly;

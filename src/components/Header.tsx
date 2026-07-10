@@ -29,6 +29,7 @@ interface HeaderProps {
   onChangeSort?: (v: 'added' | 'release' | 'match') => void;
   onResetFilters?: () => void;
   dropdownLabel?: string;
+  dropdownGetLabel?: (value: string) => string;
 }
 
 export function Header(props: HeaderProps) {
@@ -44,6 +45,7 @@ export function Header(props: HeaderProps) {
     sortBy, onToggleSort, onChangeSort,
     onResetFilters,
     dropdownLabel,
+    dropdownGetLabel,
   } = props;
 
   const sortOptions = [
@@ -184,6 +186,7 @@ export function Header(props: HeaderProps) {
                 selected={activeCategory}
                 onChange={onCategoryChange}
                 label={dropdownLabel}
+                getLabel={dropdownGetLabel}
               />
             </div>
           </div>
