@@ -94,34 +94,35 @@ export function Header(props: HeaderProps) {
               {isAdding ? <Loader2 className="h-4 w-4 animate-spin text-indigo-400" /> : <Plus className="h-4 w-4 group-hover:scale-110 transition-transform text-indigo-400" />}
               <span className="text-xs font-bold tracking-wide">新增收藏</span>
             </button>
-            {!showUpcomingOnly && (
-              <div
-                role="radiogroup"
-                aria-label="排序方式"
-                className="flex items-center gap-0.5 rounded-full glass border border-white/5 p-0.5"
-              >
-                {sortOptions.map((opt) => {
-                  const active = opt.key === sortBy;
-                  return (
-                    <button
-                      key={opt.key}
-                      role="radio"
-                      aria-checked={active}
-                      onClick={() => pickSort(opt.key)}
-                      title={opt.label}
-                      className={
-                        active
-                          ? 'flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-500/30 to-violet-500/30 px-3 py-2 text-violet-100 shadow-inner ring-1 ring-violet-400/30 transition-all'
-                          : 'flex items-center gap-1.5 rounded-full px-3 py-2 text-white/50 transition-all hover:text-white hover:bg-white/5'
-                      }
-                    >
-                      {opt.icon}
-                      <span className="text-xs font-bold tracking-wide">{opt.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            <div
+              role="radiogroup"
+              aria-label="排序方式"
+              className={`flex items-center gap-0.5 rounded-full glass border border-white/5 p-0.5 transition-all duration-300 ${
+                showUpcomingOnly ? 'opacity-40 pointer-events-none' : ''
+              }`}
+            >
+              {sortOptions.map((opt) => {
+                const active = !showUpcomingOnly && opt.key === sortBy;
+                return (
+                  <button
+                    key={opt.key}
+                    role="radio"
+                    aria-checked={active}
+                    disabled={showUpcomingOnly}
+                    onClick={() => pickSort(opt.key)}
+                    title={showUpcomingOnly ? "預售新片不支援自訂排序" : opt.label}
+                    className={
+                      active
+                        ? 'flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-500/30 to-violet-500/30 px-3 py-2 text-violet-100 shadow-inner ring-1 ring-violet-400/30 transition-all'
+                        : 'flex items-center gap-1.5 rounded-full px-3 py-2 text-white/50 transition-all hover:text-white hover:bg-white/5 disabled:hover:text-white/50'
+                    }
+                  >
+                    {opt.icon}
+                    <span className="text-xs font-bold tracking-wide">{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
             <button
               onClick={onToggleRecommendedOnly}
               className={`group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border ${
