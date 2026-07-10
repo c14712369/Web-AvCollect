@@ -2,6 +2,7 @@ import { desc, eq } from 'drizzle-orm';
 import { db } from './client';
 import { movies, favorites, appConfig, type MovieInsert } from './schema';
 import { extractMaker, extractThemes, extractActress } from '@/lib/metadata';
+import { matchActress } from '@/lib/actress-matcher';
 import { getConfig } from '@/lib/config';
 import {
   buildProfileFromFeatures,
@@ -29,24 +30,42 @@ const themesOf = (row: typeof movies.$inferSelect): string[] => {
   return real.length ? real : extractThemes(row.title);
 };
 
-const enrich = (row: typeof movies.$inferSelect): Movie => ({
-  code: row.code,
-  title: row.title,
-  url: row.url,
-  imageUrl: row.imageUrl,
-  source: row.source,
-  category: row.category,
-  releaseDate: row.releaseDate ?? null,
-  maker: extractMaker(row.code),
-  themes: themesOf(row),
-  actress: row.actress ?? extractActress(row.title),
-});
+const enrich = (row: typeof movies.$inferSelect, prefActresses: string[]): Movie => {
+  let act = row.actress || extractActress(row.title);
+  if (!act) {
+    const found = prefActresses.find((prefName) => matchActress(prefName, row.title));
+    if (found) {
+      act = found;
+    }
+  }
+  return {
+    code: row.code,
+    title: row.title,
+    url: row.url,
+    imageUrl: row.imageUrl,
+    source: row.source,
+    category: row.category,
+    releaseDate: row.releaseDate ?? null,
+    maker: extractMaker(row.code),
+    themes: themesOf(row),
+    actress: act,
+  };
+};
 
-const featuresOf = (row: typeof movies.$inferSelect): MovieFeatures => ({
-  issuer: toIssuer(row.code),
-  actress: row.actress ?? extractActress(row.title),
-  themes: themesOf(row),
-});
+const featuresOf = (row: typeof movies.$inferSelect, prefActresses: string[]): MovieFeatures => {
+  let act = row.actress || extractActress(row.title);
+  if (!act) {
+    const found = prefActresses.find((prefName) => matchActress(prefName, row.title));
+    if (found) {
+      act = found;
+    }
+  }
+  return {
+    issuer: toIssuer(row.code),
+    actress: act,
+    themes: themesOf(row),
+  };
+};
 
 export const listMovies = async (): Promise<Movie[]> => {
   const cfg = await getConfig();
@@ -58,7 +77,7 @@ export const listMovies = async (): Promise<Movie[]> => {
   // 由收藏行為 + 手動清單即時建立口味側寫，再為每部片算契合度。
   const favCodes = new Set(await listFavorites());
   const profile = buildProfileFromFeatures(
-    rows.filter((r) => favCodes.has(r.code)).map(featuresOf),
+    rows.filter((r) => favCodes.has(r.code)).map((r) => featuresOf(r, cfg.preferredActresses)),
     {
       preferredActresses: cfg.preferredActresses,
       preferredIssuers: cfg.preferredIssuers,
@@ -71,15 +90,15 @@ export const listMovies = async (): Promise<Movie[]> => {
   const visible = blocked.size === 0
     ? rows
     : rows.filter((row) => {
-        const feats = featuresOf(row);
+        const feats = featuresOf(row, cfg.preferredActresses);
         const hit = feats.themes.some((t) => blocked.has(t));
         return !hit || hasActressMatch(feats, profile);
       });
 
   return visible.map((row) => {
-    const match = classify(featuresOf(row), profile);
+    const match = classify(featuresOf(row, cfg.preferredActresses), profile);
     return {
-      ...enrich(row),
+      ...enrich(row, cfg.preferredActresses),
       matchScore: match.score,
       matchTier: match.tier,
       matchReasons: match.reasons,
@@ -89,7 +108,7 @@ export const listMovies = async (): Promise<Movie[]> => {
 };
 
 export const insertMovie = async (data: MovieInsert): Promise<Movie | null> => {
-  await getConfig();
+  const cfg = await getConfig();
   const exists = await db
     .select()
     .from(movies)
@@ -102,7 +121,7 @@ export const insertMovie = async (data: MovieInsert): Promise<Movie | null> => {
     .from(movies)
     .where(eq(movies.code, data.code))
     .limit(1);
-  return inserted[0] ? enrich(inserted[0]) : null;
+  return inserted[0] ? enrich(inserted[0], cfg.preferredActresses) : null;
 };
 
 export const listFavorites = async (): Promise<string[]> => {
