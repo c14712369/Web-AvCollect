@@ -40,12 +40,16 @@ export function extractActress(title: string): string | null {
       return null;
     }
     
-    const cleanName = name.replace(/\.$/, '');
-    if (cleanName.length >= 2 && cleanName.length <= 25) {
-      if (BLOCKED_ACTRESS_SUFFIXES.has(cleanName.toUpperCase())) {
-        return null;
+    const isEnglish = /^[a-zA-Z\s\.]+$/.test(name);
+    if (isEnglish) {
+      const cleanName = name.replace(/\.$/, '').trim();
+      if (cleanName.length >= 2 && cleanName.length <= 25) {
+        const upper = cleanName.toUpperCase();
+        if (BLOCKED_ACTRESS_SUFFIXES.has(upper) || upper.includes('COSPLAY')) {
+          return null;
+        }
+        return cleanName;
       }
-      return cleanName;
     }
   }
   return null;
