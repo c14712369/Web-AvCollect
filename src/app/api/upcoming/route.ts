@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/client';
 import { upcomingMovies } from '@/lib/db/schema';
-import { desc, eq } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
     const rows = await db
       .select()
       .from(upcomingMovies)
-      .orderBy(desc(upcomingMovies.createdAt));
+      .orderBy(
+        sql`case when ${upcomingMovies.releaseDate} is null then 1 else 0 end`,
+        asc(upcomingMovies.releaseDate)
+      );
     return NextResponse.json({ success: true, movies: rows });
   } catch (error) {
     console.error('[GET /api/upcoming]', error);

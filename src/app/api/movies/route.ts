@@ -4,6 +4,8 @@ import { insertMovie, listMovies, deleteMovie } from '@/lib/db/queries';
 import { addMovieSchema } from '@/lib/validators';
 import { extractTagsBySource, extractActressBySource } from '@/lib/scrape/detail-tags';
 
+export const dynamic = 'force-dynamic';
+
 const BROWSER_HEADERS: Record<string, string> = {
   'User-Agent':
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
