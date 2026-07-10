@@ -5,7 +5,6 @@ import type { Movie } from '@/types/av';
 import { Header } from './Header';
 import { MovieGrid } from './MovieGrid';
 import { MovieDetailModal } from './MovieDetailModal';
-import { ImportExportDialog } from './ImportExportDialog';
 import { AddMovieDialog } from './AddMovieDialog';
 import { useFavorites } from '@/hooks/useFavorites';
 import { usePreferredActresses } from '@/hooks/usePreferredActresses';
@@ -31,7 +30,6 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   const [showUpcomingOnly, setShowUpcomingOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'added' | 'release' | 'match'>('added');
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-  const [importExportOpen, setImportExportOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
  
@@ -79,7 +77,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   const filtered = useMemo(() => {
     // 預售新片走獨立來源，直接轉換為 Movie 格式
     if (showUpcomingOnly) {
-      return upcomingMovies
+      const result = upcomingMovies
         .filter((m) => {
           const q = searchQuery.toLowerCase();
           return (
@@ -100,6 +98,14 @@ export function HomeView({ initialMovies }: HomeViewProps) {
           themes: [],
           actress: m.actress,
         })) as Movie[];
+
+      // 預售新片依發行日期升冪排列 (ASC)，無日期的排在最後
+      return [...result].sort((a, b) => {
+        if (!a.releaseDate && !b.releaseDate) return 0;
+        if (!a.releaseDate) return 1;
+        if (!b.releaseDate) return -1;
+        return a.releaseDate.localeCompare(b.releaseDate);
+      });
     }
  
     const result = movies.filter((m) => {
@@ -169,10 +175,20 @@ export function HomeView({ initialMovies }: HomeViewProps) {
     [searchQuery, activeCategory, showFavoritesOnly, showRecommendedOnly, showFavActressOnly, showUpcomingOnly, sortBy]
   );
 
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setActiveCategory('全部');
+    setShowFavoritesOnly(false);
+    setShowRecommendedOnly(false);
+    setShowFavActressOnly(false);
+    setShowUpcomingOnly(false);
+    setSortBy('added');
+  };
+
   const handleSubmitAdd = async (url: string) => {
     await addMovie.mutateAsync(url);
   };
-
+ 
   return (
     <main className="min-h-screen bg-background text-white font-inter selection:bg-indigo-500/30">
       <Header
@@ -182,23 +198,43 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         activeCategory={activeCategory}
         onCategoryChange={setActiveCategory}
         showFavoritesOnly={showFavoritesOnly}
-        onToggleFavoritesOnly={() => setShowFavoritesOnly((v) => !v)}
+        onToggleFavoritesOnly={() => {
+          setShowFavoritesOnly((v) => !v);
+          setShowRecommendedOnly(false);
+          setShowFavActressOnly(false);
+          setShowUpcomingOnly(false);
+        }}
         showRecommendedOnly={showRecommendedOnly}
-        onToggleRecommendedOnly={() => setShowRecommendedOnly((v) => !v)}
+        onToggleRecommendedOnly={() => {
+          setShowRecommendedOnly((v) => !v);
+          setShowFavoritesOnly(false);
+          setShowFavActressOnly(false);
+          setShowUpcomingOnly(false);
+        }}
         showFavActressOnly={showFavActressOnly}
-        onToggleFavActressOnly={() => setShowFavActressOnly((v) => !v)}
+        onToggleFavActressOnly={() => {
+          setShowFavActressOnly((v) => !v);
+          setShowFavoritesOnly(false);
+          setShowRecommendedOnly(false);
+          setShowUpcomingOnly(false);
+        }}
         showUpcomingOnly={showUpcomingOnly}
-        onToggleUpcomingOnly={() => setShowUpcomingOnly((v) => !v)}
+        onToggleUpcomingOnly={() => {
+          setShowUpcomingOnly((v) => !v);
+          setShowFavoritesOnly(false);
+          setShowRecommendedOnly(false);
+          setShowFavActressOnly(false);
+        }}
         onAddMovie={() => setAddOpen(true)}
         isAdding={addMovie.isPending}
         totalCount={filtered.length}
-        onOpenImportExport={() => setImportExportOpen(true)}
         searchInputRef={searchInputRef}
         sortBy={sortBy}
         onToggleSort={() =>
           setSortBy((v) => (v === 'added' ? 'release' : v === 'release' ? 'match' : 'added'))
         }
         onChangeSort={setSortBy}
+        onResetFilters={handleResetFilters}
       />
       <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-10">
         <MovieGrid
@@ -214,10 +250,6 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         movie={selectedMovie}
         onClose={() => setSelectedMovie(null)}
         onDeleteUpcoming={(code) => deleteUpcoming.mutate(code)}
-      />
-      <ImportExportDialog
-        open={importExportOpen}
-        onClose={() => setImportExportOpen(false)}
       />
       <AddMovieDialog
         open={addOpen}

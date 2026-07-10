@@ -23,11 +23,11 @@ interface HeaderProps {
   onAddMovie: () => void;
   isAdding: boolean;
   totalCount: number;
-  onOpenImportExport: () => void;
   searchInputRef?: React.Ref<HTMLInputElement>;
   sortBy: 'added' | 'release' | 'match';
   onToggleSort: () => void;
   onChangeSort?: (v: 'added' | 'release' | 'match') => void;
+  onResetFilters?: () => void;
 }
 
 export function Header(props: HeaderProps) {
@@ -39,9 +39,9 @@ export function Header(props: HeaderProps) {
     showFavActressOnly, onToggleFavActressOnly,
     showUpcomingOnly, onToggleUpcomingOnly,
     onAddMovie, isAdding, totalCount,
-    onOpenImportExport,
     searchInputRef,
     sortBy, onToggleSort, onChangeSort,
+    onResetFilters,
   } = props;
 
   const sortOptions = [
@@ -59,7 +59,11 @@ export function Header(props: HeaderProps) {
       <div className="mx-auto max-w-[1400px] px-4 py-4 sm:px-6 lg:px-10">
         <div className="flex flex-col space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center space-x-4">
+            <div 
+              onClick={onResetFilters}
+              className="flex items-center space-x-4 cursor-pointer select-none active:scale-95 hover:opacity-90 transition-all duration-200"
+              title="重設所有篩選並回首頁"
+            >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-700 shadow-lg shadow-indigo-500/20">
                 <LayoutGrid className="h-5 w-5 text-white" />
               </div>
@@ -90,32 +94,34 @@ export function Header(props: HeaderProps) {
               {isAdding ? <Loader2 className="h-4 w-4 animate-spin text-indigo-400" /> : <Plus className="h-4 w-4 group-hover:scale-110 transition-transform text-indigo-400" />}
               <span className="text-xs font-bold tracking-wide">新增收藏</span>
             </button>
-            <div
-              role="radiogroup"
-              aria-label="排序方式"
-              className="flex items-center gap-0.5 rounded-full glass border border-white/5 p-0.5"
-            >
-              {sortOptions.map((opt) => {
-                const active = opt.key === sortBy;
-                return (
-                  <button
-                    key={opt.key}
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => pickSort(opt.key)}
-                    title={opt.label}
-                    className={
-                      active
-                        ? 'flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-500/30 to-violet-500/30 px-3 py-2 text-violet-100 shadow-inner ring-1 ring-violet-400/30 transition-all'
-                        : 'flex items-center gap-1.5 rounded-full px-3 py-2 text-white/50 transition-all hover:text-white hover:bg-white/5'
-                    }
-                  >
-                    {opt.icon}
-                    <span className="text-xs font-bold tracking-wide">{opt.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {!showUpcomingOnly && (
+              <div
+                role="radiogroup"
+                aria-label="排序方式"
+                className="flex items-center gap-0.5 rounded-full glass border border-white/5 p-0.5"
+              >
+                {sortOptions.map((opt) => {
+                  const active = opt.key === sortBy;
+                  return (
+                    <button
+                      key={opt.key}
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => pickSort(opt.key)}
+                      title={opt.label}
+                      className={
+                        active
+                          ? 'flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-500/30 to-violet-500/30 px-3 py-2 text-violet-100 shadow-inner ring-1 ring-violet-400/30 transition-all'
+                          : 'flex items-center gap-1.5 rounded-full px-3 py-2 text-white/50 transition-all hover:text-white hover:bg-white/5'
+                      }
+                    >
+                      {opt.icon}
+                      <span className="text-xs font-bold tracking-wide">{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <button
               onClick={onToggleRecommendedOnly}
               className={`group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border ${
@@ -151,13 +157,6 @@ export function Header(props: HeaderProps) {
             >
               <Calendar className={`h-4 w-4 transition-all duration-500 ${showUpcomingOnly ? 'scale-110' : 'group-hover:scale-110 group-hover:text-indigo-400'}`} />
               <span className="text-xs font-semibold tracking-wide">預售新片</span>
-            </button>
-            <button
-              onClick={onOpenImportExport}
-              className="rounded-full glass border border-white/5 p-2.5 text-white/50 hover:text-white hover:border-white/20 transition-all duration-200"
-              aria-label="收藏匯入匯出"
-            >
-              <Database className="h-4 w-4" />
             </button>
             <button
               onClick={onToggleFavoritesOnly}
