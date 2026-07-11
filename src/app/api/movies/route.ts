@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import * as cheerio from 'cheerio';
 import { insertMovie, listMovies, deleteMovie } from '@/lib/db/queries';
 import { addMovieSchema } from '@/lib/validators';
@@ -51,6 +53,30 @@ async function fetchViaJina(url: string): Promise<{ html: string; status: number
   return { html: await res.text(), status: res.status };
 }
 
+const execFileAsync = promisify(execFile);
+
+/**
+ * 改用 curl 子行程抓取。CF 對 Node TLS 堆疊（fetch/undici）做 JA3 指紋封鎖
+ * （同 headers 下 curl 200、Node 403，與 AvBatch 2026-06 實測一致），
+ * curl 的 OpenSSL 指紋可通過。本機必有 curl；Vercel 等無 curl 環境會
+ * 直接丟錯，由呼叫端 fallback 到下一招。
+ * 安全性：execFile + 參數陣列傳 URL，無 shell 字串插值。
+ */
+async function fetchViaCurl(url: string): Promise<{ html: string; status: number }> {
+  const args = ['-sS', '--compressed', '-L', '--max-time', '45', '-w', '\n%{http_code}'];
+  for (const [k, v] of Object.entries({ ...BROWSER_HEADERS, Referer: `${new URL(url).origin}/` })) {
+    args.push('-H', `${k}: ${v}`);
+  }
+  args.push(url);
+  const { stdout } = await execFileAsync('curl', args, {
+    maxBuffer: 32 * 1024 * 1024,
+    windowsHide: true,
+    timeout: 45_000,
+  });
+  const cut = stdout.lastIndexOf('\n');
+  return { html: stdout.slice(0, cut), status: Number(stdout.slice(cut + 1).trim()) };
+}
+
 export async function GET() {
   try {
     const movies = await listMovies();
@@ -86,7 +112,19 @@ export async function POST(req: Request) {
     let $ = cheerio.load(html);
     let title = parseTitle($);
 
-    // 直連被 Cloudflare 擋下 → 改走 Jina reader 代理重抓
+    // 直連被 Cloudflare 擋下 → 先試 curl 子行程（繞 JA3 指紋封鎖，本機最可靠）
+    if (looksBlocked(status, title)) {
+      try {
+        ({ html, status } = await fetchViaCurl(url));
+        $ = cheerio.load(html);
+        title = parseTitle($);
+      } catch (curlError) {
+        // 無 curl 的環境（如 Vercel）或 curl 也失敗 → 交給下一招
+        console.warn('[POST /api/movies] curl 降級失敗:', (curlError as Error).message);
+      }
+    }
+
+    // curl 也不行 → 改走 Jina reader 代理重抓
     if (looksBlocked(status, title)) {
       ({ html, status } = await fetchViaJina(url));
       $ = cheerio.load(html);
