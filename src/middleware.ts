@@ -10,6 +10,9 @@ function isPublic(pathname: string): boolean {
 }
 
 export async function middleware(req: NextRequest) {
+  // 本機開發（next dev）免登入；next build/start 與正式部署仍強制驗證
+  if (process.env.NODE_ENV === 'development') return NextResponse.next();
+
   const { pathname } = req.nextUrl;
   if (isPublic(pathname)) return NextResponse.next();
 
