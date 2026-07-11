@@ -67,9 +67,14 @@ function missavActress($: CheerioAPI): string | null {
   return name;
 }
 
-/** Jable：.info-header .models a 連結文字。 */
+/**
+ * Jable：.models a 內的頭像 title 屬性。
+ * 有照片時是 <img title="全名">，無照片時是 <span class="placeholder" title="全名">姓氏首字</span>，
+ * 兩種都以 title 為準；連結文字在 placeholder 情況只有一個字，僅當最後 fallback。
+ */
 function jableActress($: CheerioAPI): string | null {
-  const text = $('.models a').first().text().trim();
+  const link = $('.models a').first();
+  const text = link.find('[title]').first().attr('title')?.trim() || link.text().trim();
   return text || null;
 }
 
