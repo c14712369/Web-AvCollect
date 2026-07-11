@@ -87,6 +87,51 @@ export function getActressVariants(prefName: string): string[] {
   return Array.from(new Set(list.map(s => s.toLowerCase().trim()).filter(Boolean)));
 }
 
+/** actress 欄位的多人切割規則（與收藏限定下拉、喜愛女優篩選共用）。 */
+export const ACTRESS_SPLIT_REGEX = /[\s,，、・]+/;
+
+/**
+ * 將多個 actress 欄位切割後，以中日變體歸一分組計數。
+ * 回傳 { 顯示名: 出現次數 }；同一人的不同寫法（大小寫/譯名）合併為一組，
+ * 顯示名取該組出現最多的原始寫法。計數邏輯必須與 matchActress 的歸一規則一致，
+ * 否則下拉選單數字會與實際篩選結果不符。
+ */
+export function countActressAppearances(
+  actressFields: (string | null | undefined)[]
+): Record<string, number> {
+  const groups = new Map<string, { total: number; forms: Map<string, number> }>();
+
+  for (const field of actressFields) {
+    if (!field) continue;
+    for (const raw of field.split(ACTRESS_SPLIT_REGEX)) {
+      const form = raw.trim();
+      if (!form) continue;
+      const key = getActressVariants(form).sort().join('|');
+      let group = groups.get(key);
+      if (!group) {
+        group = { total: 0, forms: new Map() };
+        groups.set(key, group);
+      }
+      group.total += 1;
+      group.forms.set(form, (group.forms.get(form) || 0) + 1);
+    }
+  }
+
+  const counts: Record<string, number> = {};
+  for (const group of groups.values()) {
+    let label = '';
+    let best = -1;
+    for (const [form, n] of group.forms) {
+      if (n > best) {
+        label = form;
+        best = n;
+      }
+    }
+    counts[label] = group.total;
+  }
+  return counts;
+}
+
 /**
  * 比對喜愛女優名與目標字串（標題/主演欄位等），支援中日變體與英文單字邊界防護。
  */
@@ -96,11 +141,12 @@ export function matchActress(prefName: string, targetText: string): boolean {
   const variants = getActressVariants(prefName);
   
   return variants.some((variant) => {
-    const isCjk = /^[一-防ぁ-んァ-ヶ\s]+$/.test(variant);
-    if (isCjk) {
+    // 只有純 ASCII（英文名）需要單字邊界防護；
+    // CJK/假名/長音/全形符號等一律用子字串比對（\b 在非 ASCII 字元旁永遠不成立）
+    const isAscii = /^[\x00-\x7F]+$/.test(variant);
+    if (!isAscii) {
       return targetLower.includes(variant);
     }
-    // 英文變體加單字邊界保護
     const escaped = variant.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     const regex = new RegExp('\\b' + escaped.replace(/\s+/g, '\\s+') + '\\b', 'i');
     return regex.test(targetLower);

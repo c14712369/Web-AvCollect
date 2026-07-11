@@ -11,7 +11,7 @@ import { usePreferredActresses } from '@/hooks/usePreferredActresses';
 import { useAddMovie, useMovies } from '@/hooks/useMovies';
 import { useUpcomingMovies, useDeleteUpcomingMovie } from '@/hooks/useUpcomingMovies';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { matchActress } from '@/lib/actress-matcher';
+import { ACTRESS_SPLIT_REGEX, countActressAppearances, matchActress } from '@/lib/actress-matcher';
 
 interface HomeViewProps {
   initialMovies: Movie[];
@@ -75,19 +75,10 @@ export function HomeView({ initialMovies }: HomeViewProps) {
     return movies.filter((m) => isFavorite(m.code));
   }, [movies, isFavorite]);
 
-  const actressCountsInFavorites = useMemo(() => {
-    const counts: Record<string, number> = {};
-    favoriteMovies.forEach((m) => {
-      if (!m.actress) return;
-      m.actress.split(/[\s,，、・]+/).forEach((a) => {
-        const clean = a.trim();
-        if (clean) {
-          counts[clean] = (counts[clean] || 0) + 1;
-        }
-      });
-    });
-    return counts;
-  }, [favoriteMovies]);
+  const actressCountsInFavorites = useMemo(
+    () => countActressAppearances(favoriteMovies.map((m) => m.actress)),
+    [favoriteMovies]
+  );
 
   const availableActressesOrdered = useMemo(() => {
     const names = Object.keys(actressCountsInFavorites);
@@ -155,19 +146,11 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         !showFavActressOnly ||
         (!!m.actress &&
           m.actress
-            .split(/[\s,，、・]+/)
+            .split(ACTRESS_SPLIT_REGEX)
             .map((a) => a.toLowerCase().trim())
             .filter(Boolean)
             .some((a) => favActressSet.has(a))) ||
-        preferredActresses.some((name) => {
-          const isCjk = /^[一-龥ぁ-んァ-ヶ]+$/.test(name);
-          if (isCjk) {
-            return m.title.toLowerCase().includes(name.toLowerCase());
-          }
-          const escaped = name.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-          const regex = new RegExp('\\b' + escaped.replace(/\s+/g, '\\s+') + '\\b', 'i');
-          return regex.test(m.title);
-        });
+        preferredActresses.some((name) => matchActress(name, m.title));
       return (
         matchesSearch && matchesCategory && matchesFav &&
         matchesRecommended && matchesFavActress && matchesFavActressInFavorites
