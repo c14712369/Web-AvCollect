@@ -5,7 +5,7 @@ export const env = createEnv({
   server: {
     TURSO_DATABASE_URL: z.string().min(1),
     TURSO_AUTH_TOKEN: z.string().optional().default(''),
-    APP_SECRET: z.string().min(8, 'APP_SECRET 至少 8 字元'),
+    APP_SECRET: z.string().min(1, 'APP_SECRET 不能為空'),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url().optional(),
