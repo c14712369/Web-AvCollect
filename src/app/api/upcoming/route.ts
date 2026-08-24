@@ -1,15 +1,30 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/client';
 import { upcomingMovies } from '@/lib/db/schema';
-import { asc, eq, sql } from 'drizzle-orm';
+import { asc, eq, sql, lt, gte, or } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' });
+
+    // 自動清理已過期的預售新片 (releaseDate < today)
+    try {
+      await db.delete(upcomingMovies).where(lt(upcomingMovies.releaseDate, today));
+    } catch (cleanupErr) {
+      console.warn('[GET /api/upcoming] auto cleanup expired upcoming failed:', cleanupErr);
+    }
+
     const rows = await db
       .select()
       .from(upcomingMovies)
+      .where(
+        or(
+          gte(upcomingMovies.releaseDate, today),
+          sql`${upcomingMovies.releaseDate} is null`
+        )
+      )
       .orderBy(
         sql`case when ${upcomingMovies.releaseDate} is null then 1 else 0 end`,
         asc(upcomingMovies.releaseDate)

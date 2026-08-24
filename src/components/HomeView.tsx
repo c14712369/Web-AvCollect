@@ -101,8 +101,11 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   const filtered = useMemo(() => {
     // 預售新片走獨立來源，直接轉換為 Movie 格式
     if (showUpcomingOnly) {
+      const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' });
       const result = upcomingMovies
         .filter((m) => {
+          // 預售新片若已小於今日日期則剔除
+          if (m.releaseDate && m.releaseDate < today) return false;
           const q = searchQuery.toLowerCase();
           return (
             m.title.toLowerCase().includes(q) ||

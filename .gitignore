@@ -39,4 +39,6 @@ local.db
 local.db-journal
 *.db
 jable-fav.html
+*.backup.*
+
 
