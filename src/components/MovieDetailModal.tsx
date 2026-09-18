@@ -36,6 +36,46 @@ export function MovieDetailModal({ movie, onClose, onDeleteUpcoming }: Props) {
     }
   };
 
+  const handleWatch = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    // 若使用者按住 Ctrl (Windows) 或 Cmd (Mac)，直接讓瀏覽器以原生背景分頁開啟，只關閉 Modal
+    if (e.ctrlKey || e.metaKey) {
+      onClose();
+      return;
+    }
+
+    if (!movie?.url) return;
+
+    // 派發事件給擴充功能或油猴腳本
+    window.dispatchEvent(
+      new CustomEvent('avcollect:open-background-tab', {
+        detail: { url: movie.url },
+      })
+    );
+
+    // 立即關閉 Modal
+    onClose();
+
+    // 若瀏覽器已安裝擴充功能，擴充功能已在背景靜默開好，阻止預設跳轉
+    if (typeof window !== 'undefined' && (window as any).__AVCOLLECT_EXT_INSTALLED__) {
+      e.preventDefault();
+      return;
+    }
+
+    // 無擴充功能時的常規 fallback 開啟
+    e.preventDefault();
+    window.open(movie.url, '_blank');
+  };
+
+  const handleAuxClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    // 滑鼠滾輪中鍵點擊 (button === 1)
+    if (e.button === 1) {
+      onClose();
+      setTimeout(() => {
+        window.focus();
+      }, 50);
+    }
+  };
+
   const initialUrl = movie ? upgradeImageUrl(movie.imageUrl, movie.source) : '';
   const [imgSrc, setImgSrc] = useState(initialUrl);
   const [imgError, setImgError] = useState(false);
@@ -62,8 +102,14 @@ export function MovieDetailModal({ movie, onClose, onDeleteUpcoming }: Props) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
+    const onCloseEvent = () => onClose();
+
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    window.addEventListener('avcollect:close-modal', onCloseEvent);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('avcollect:close-modal', onCloseEvent);
+    };
   }, [onClose]);
 
   return (
@@ -133,25 +179,33 @@ export function MovieDetailModal({ movie, onClose, onDeleteUpcoming }: Props) {
               <h2 className="text-lg font-bold leading-snug text-white">{movie.title}</h2>
 
               {/* 操作按鈕 - 放在標題下方 */}
-              <div className="flex gap-2.5 pt-1">
-                <a
-                  href={movie.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={onClose}
-                  className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition hover:shadow-indigo-500/50 active:scale-95"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  {movie.category === '預售新片' ? '前往官網' : '前往觀看'}
-                </a>
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-rose-500/10 px-4 py-3.5 text-sm font-bold text-rose-500 transition hover:bg-rose-500/20 disabled:opacity-50 border border-rose-500/20 active:scale-95"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  {isDeleting ? '...' : '刪除'}
-                </button>
+              <div className="flex flex-col gap-1.5 pt-1">
+                <div className="flex gap-2.5">
+                  <a
+                    href={movie.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-action="watch-external"
+                    onClick={handleWatch}
+                    onAuxClick={handleAuxClick}
+                    title="左鍵點擊前往；亦支援滑鼠中鍵或 Ctrl+點擊在背景開片"
+                    className="flex-[2] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition hover:shadow-indigo-500/50 active:scale-95 cursor-pointer select-none"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    {movie.category === '預售新片' ? '前往官網' : '前往觀看'}
+                  </a>
+                  <button
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-rose-500/10 px-4 py-3.5 text-sm font-bold text-rose-500 transition hover:bg-rose-500/20 disabled:opacity-50 border border-rose-500/20 active:scale-95"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {isDeleting ? '...' : '刪除'}
+                  </button>
+                </div>
+                <p className="text-center text-xs text-white/40 select-none">
+                  💡 提示：使用 <span className="text-violet-300 font-medium">滑鼠滾輪中鍵</span> 或 <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/70 font-mono text-xs">Ctrl</kbd>+點擊，可在背景直接開新分頁不跳轉
+                </p>
               </div>
 
               {/* 口味契合度 */}

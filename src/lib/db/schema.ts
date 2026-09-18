@@ -55,9 +55,18 @@ export const upcomingMovies = sqliteTable('upcoming_movies', {
     .default(sql`(unixepoch())`),
 });
 
+// 影片瀏覽/點擊記錄表（記錄使用者點進去過的影片，防範過期誤刪）
+export const viewedMovies = sqliteTable('viewed_movies', {
+  code: text('code').primaryKey(),
+  viewedAt: integer('viewed_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
 export type MovieRow = typeof movies.$inferSelect;
 export type MovieInsert = typeof movies.$inferInsert;
 export type FavoriteRow = typeof favorites.$inferSelect;
 export type AppConfigRow = typeof appConfig.$inferSelect;
 export type UpcomingMovieRow = typeof upcomingMovies.$inferSelect;
 export type UpcomingMovieInsert = typeof upcomingMovies.$inferInsert;
+export type ViewedMovieRow = typeof viewedMovies.$inferSelect;

@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "AvCollect 背景開片助手",
+  "version": "1.0.0",
+  "description": "讓 AvCollect 的前往觀看按鈕在背景靜默開啟新分頁，完全不中斷挑片焦點",
+  "permissions": ["tabs"],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "http://127.0.0.1:3000/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:3000/*",
+        "http://127.0.0.1:3000/*",
+        "https://*/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

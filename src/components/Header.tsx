@@ -1,10 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Heart, Plus, Loader2, Database, Calendar, Clock, Target, Sparkles, Settings, Star } from 'lucide-react';
+import { LayoutGrid, Heart, Plus, Loader2, Database, Calendar, Clock, Settings, Star, User, Building2 } from 'lucide-react';
 import { CategoryDropdown } from './CategoryDropdown';
 import { SearchInput } from './SearchInput';
 import { LogoutButton } from './LogoutButton';
+
+export type SortOption = 'added' | 'actress' | 'maker';
 
 interface HeaderProps {
   searchQuery: string;
@@ -14,8 +16,6 @@ interface HeaderProps {
   onCategoryChange: (v: string) => void;
   showFavoritesOnly: boolean;
   onToggleFavoritesOnly: () => void;
-  showRecommendedOnly: boolean;
-  onToggleRecommendedOnly: () => void;
   showFavActressOnly: boolean;
   onToggleFavActressOnly: () => void;
   showUpcomingOnly: boolean;
@@ -24,10 +24,10 @@ interface HeaderProps {
   isAdding: boolean;
   totalCount: number;
   searchInputRef?: React.Ref<HTMLInputElement>;
-  sortBy: 'added' | 'release' | 'match';
-  onToggleSort: () => void;
-  onChangeSort?: (v: 'added' | 'release' | 'match') => void;
+  sortBy: SortOption;
+  onChangeSort?: (v: SortOption) => void;
   onResetFilters?: () => void;
+  showCategoryDropdown?: boolean;
   dropdownLabel?: string;
   dropdownGetLabel?: (value: string) => string;
 }
@@ -37,25 +37,24 @@ export function Header(props: HeaderProps) {
     searchQuery, onSearchChange,
     categories, activeCategory, onCategoryChange,
     showFavoritesOnly, onToggleFavoritesOnly,
-    showRecommendedOnly, onToggleRecommendedOnly,
     showFavActressOnly, onToggleFavActressOnly,
     showUpcomingOnly, onToggleUpcomingOnly,
     onAddMovie, isAdding, totalCount,
     searchInputRef,
-    sortBy, onToggleSort, onChangeSort,
+    sortBy, onChangeSort,
     onResetFilters,
+    showCategoryDropdown = false,
     dropdownLabel,
     dropdownGetLabel,
   } = props;
 
-  const sortOptions = [
-    { key: 'added' as const, icon: <Clock className="h-3.5 w-3.5" />, label: '最新加入' },
-    { key: 'release' as const, icon: <Calendar className="h-3.5 w-3.5" />, label: '最新發布' },
-    { key: 'match' as const, icon: <Target className="h-3.5 w-3.5" />, label: '喜愛分數' },
+  const sortOptions: { key: SortOption; icon: React.ReactNode; label: string }[] = [
+    { key: 'added', icon: <Clock className="h-3.5 w-3.5" />, label: '新增時間' },
+    { key: 'actress', icon: <User className="h-3.5 w-3.5" />, label: '女優名稱' },
+    { key: 'maker', icon: <Building2 className="h-3.5 w-3.5" />, label: '廠商' },
   ];
-  const pickSort = (v: 'added' | 'release' | 'match') => {
+  const pickSort = (v: SortOption) => {
     if (onChangeSort) onChangeSort(v);
-    else if (v !== sortBy) onToggleSort();
   };
 
   return (
@@ -128,18 +127,6 @@ export function Header(props: HeaderProps) {
               })}
             </div>
             <button
-              onClick={onToggleRecommendedOnly}
-              className={`group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border ${
-                showRecommendedOnly
-                  ? 'bg-violet-500/20 border-violet-500/50 text-violet-300 shadow-[0_0_20px_rgba(139,92,246,0.2)]'
-                  : 'glass border-white/5 text-white/50 hover:text-white hover:border-white/20 hover:bg-white/5'
-              }`}
-              title="只看口味契合度高的影片"
-            >
-              <Sparkles className={`h-4 w-4 transition-all duration-500 ${showRecommendedOnly ? 'scale-110' : 'group-hover:scale-110 group-hover:text-violet-400'}`} />
-              <span className="text-xs font-semibold tracking-wide">為你推薦</span>
-            </button>
-            <button
               onClick={onToggleFavActressOnly}
               className={`group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border ${
                 showFavActressOnly
@@ -174,20 +161,24 @@ export function Header(props: HeaderProps) {
               <Heart className={`h-4 w-4 transition-all duration-500 ${showFavoritesOnly ? 'fill-red-500 scale-110' : 'group-hover:scale-110 group-hover:text-red-400'}`} />
               <span className="text-xs font-semibold tracking-wide">收藏限定</span>
             </button>
-            <div className="flex items-center space-x-2 rounded-full glass border-white/5 px-5 py-2.5">
-              <span className="text-xs font-medium text-white/30 uppercase tracking-tighter">總計</span>
-              <span className="text-sm font-bold text-indigo-400 font-mono">
-                {totalCount.toString().padStart(2, '0')}
-              </span>
-            </div>
-            <div className="ml-auto">
-              <CategoryDropdown
-                options={categories}
-                selected={activeCategory}
-                onChange={onCategoryChange}
-                label={dropdownLabel}
-                getLabel={dropdownGetLabel}
-              />
+            <div className="ml-auto flex items-center gap-3">
+              {showCategoryDropdown && (
+                <div className="animate-in fade-in duration-200">
+                  <CategoryDropdown
+                    options={categories}
+                    selected={activeCategory}
+                    onChange={onCategoryChange}
+                    label={dropdownLabel}
+                    getLabel={dropdownGetLabel}
+                  />
+                </div>
+              )}
+              <div className="flex items-center space-x-2 rounded-full glass border-white/5 px-5 py-2.5">
+                <span className="text-xs font-medium text-white/30 uppercase tracking-tighter">總計</span>
+                <span className="text-sm font-bold text-indigo-400 font-mono">
+                  {totalCount.toString().padStart(2, '0')}
+                </span>
+              </div>
             </div>
           </div>
         </div>

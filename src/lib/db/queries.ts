@@ -1,6 +1,6 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, and, lt, inArray, sql } from 'drizzle-orm';
 import { db } from './client';
-import { movies, favorites, appConfig, type MovieInsert } from './schema';
+import { movies, favorites, appConfig, viewedMovies, type MovieInsert } from './schema';
 import { extractMaker, extractThemes, extractActress } from '@/lib/metadata';
 import { matchActress } from '@/lib/actress-matcher';
 import { getConfig } from '@/lib/config';
@@ -67,7 +67,125 @@ const featuresOf = (row: typeof movies.$inferSelect, prefActresses: string[]): M
   };
 };
 
+/** 自動確保 viewed_movies 資料表存在。 */
+let ensuredViewedTable = false;
+export async function ensureViewedMoviesTable(): Promise<void> {
+  if (ensuredViewedTable) return;
+  try {
+    await db.run(
+      sql`CREATE TABLE IF NOT EXISTS viewed_movies (code TEXT PRIMARY KEY, viewed_at INTEGER NOT NULL DEFAULT (unixepoch()))`
+    );
+    ensuredViewedTable = true;
+  } catch (e) {
+    console.warn('[db] ensureViewedMoviesTable warning:', e);
+  }
+}
+
+/** 記錄使用者點進去瀏覽過的影片 */
+export async function recordMovieView(code: string): Promise<void> {
+  if (!code) return;
+  await ensureViewedMoviesTable();
+  try {
+    await db
+      .insert(viewedMovies)
+      .values({ code, viewedAt: new Date() })
+      .onConflictDoUpdate({
+        target: viewedMovies.code,
+        set: { viewedAt: new Date() },
+      });
+  } catch (err) {
+    console.warn('[db] recordMovieView failed:', err);
+  }
+}
+
+/** 取得所有已點擊瀏覽過的番號集合 */
+export async function listViewedCodes(): Promise<Set<string>> {
+  await ensureViewedMoviesTable();
+  try {
+    const rows = await db.select({ code: viewedMovies.code }).from(viewedMovies);
+    return new Set(rows.map((r) => r.code));
+  } catch {
+    return new Set();
+  }
+}
+
+let lastCleanupTime = 0;
+const CLEANUP_INTERVAL = 30 * 60 * 1000; // 每 30 分鐘最多檢查一次自動清理
+
+/**
+ * 自動清理入庫滿 2 週、發行女優非喜愛女優且未曾點進去瀏覽過的影片：
+ * 條件：
+ * 1. createdAt < 14 天前
+ * 2. 發行女優不是喜愛女優（preferredActresses）
+ * 3. 2 週內使用者未曾點進去瀏覽過（not in viewed_movies）
+ * 4. 非收藏影片（not in favorites）
+ * 5. 非使用者手動新增的影片（category !== '使用者新增'）
+ */
+export async function cleanupStaleUnviewedMovies(force = false): Promise<number> {
+  const now = Date.now();
+  if (!force && now - lastCleanupTime < CLEANUP_INTERVAL) {
+    return 0;
+  }
+  lastCleanupTime = now;
+
+  try {
+    await ensureViewedMoviesTable();
+    const cfg = await getConfig();
+    const favCodes = new Set(await listFavorites());
+    const viewedCodes = await listViewedCodes();
+    const twoWeeksAgo = new Date(now - 14 * 24 * 60 * 60 * 1000);
+
+    // 撈取入庫滿 14 天的影片進行檢查
+    const oldMovies = await db
+      .select()
+      .from(movies)
+      .where(lt(movies.createdAt, twoWeeksAgo));
+
+    const toDelete: string[] = [];
+    for (const m of oldMovies) {
+      // 1. 已收藏的影片絕對保留
+      if (favCodes.has(m.code)) continue;
+
+      // 2. 曾點進去瀏覽過的影片保留
+      if (viewedCodes.has(m.code)) continue;
+
+      // 3. 使用者手動新增的影片保留
+      if (m.category === '使用者新增') continue;
+
+      // 4. 女優為喜愛女優的保留（支援結構化 actress 與標題比對）
+      const act = m.actress || extractActress(m.title);
+      const isFavActress = cfg.preferredActresses.some(
+        (pref) => (act && matchActress(pref, act)) || matchActress(pref, m.title)
+      );
+      if (isFavActress) continue;
+
+      // 符合自動清理條件
+      toDelete.push(m.code);
+    }
+
+    if (toDelete.length > 0) {
+      const chunkSize = 100;
+      for (let i = 0; i < toDelete.length; i += chunkSize) {
+        const chunk = toDelete.slice(i, i + chunkSize);
+        await db.delete(movies).where(inArray(movies.code, chunk));
+      }
+      console.log(`[cleanup] 自動移除了 ${toDelete.length} 部超過兩週未點擊瀏覽的非喜愛女優影片`);
+    }
+    return toDelete.length;
+  } catch (err) {
+    console.warn('[cleanup] cleanupStaleUnviewedMovies failed:', err);
+    return 0;
+  }
+}
+
 export const listMovies = async (): Promise<Movie[]> => {
+  // 自動清理過期且未曾瀏覽的非喜愛女優影片
+  try {
+    await cleanupStaleUnviewedMovies();
+  } catch (e) {
+    console.warn('[listMovies] auto cleanup error:', e);
+  }
+
   const cfg = await getConfig();
   const rows = await db
     .select()

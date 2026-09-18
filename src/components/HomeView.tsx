@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import type { Movie } from '@/types/av';
-import { Header } from './Header';
+import { Header, type SortOption } from './Header';
 import { MovieGrid } from './MovieGrid';
 import { MovieDetailModal } from './MovieDetailModal';
 import { AddMovieDialog } from './AddMovieDialog';
@@ -11,7 +11,7 @@ import { usePreferredActresses } from '@/hooks/usePreferredActresses';
 import { useAddMovie, useMovies } from '@/hooks/useMovies';
 import { useUpcomingMovies, useDeleteUpcomingMovie } from '@/hooks/useUpcomingMovies';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { ACTRESS_SPLIT_REGEX, countActressAppearances, matchActress } from '@/lib/actress-matcher';
+import { ACTRESS_SPLIT_REGEX, matchActress } from '@/lib/actress-matcher';
 
 interface HomeViewProps {
   initialMovies: Movie[];
@@ -24,13 +24,11 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   const preferredActresses = usePreferredActresses();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('全部');
-  const [activeActress, setActiveActress] = useState('全部');
+  const [activeFavActress, setActiveFavActress] = useState('全部');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [showRecommendedOnly, setShowRecommendedOnly] = useState(false);
   const [showFavActressOnly, setShowFavActressOnly] = useState(false);
   const [showUpcomingOnly, setShowUpcomingOnly] = useState(false);
-  const [sortBy, setSortBy] = useState<'added' | 'release' | 'match'>('added');
+  const [sortBy, setSortBy] = useState<SortOption>('added');
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -53,50 +51,52 @@ export function HomeView({ initialMovies }: HomeViewProps) {
       handler: () => setShowFavoritesOnly((v) => !v),
     },
     {
-      key: 'r',
-      handler: () => setShowRecommendedOnly((v) => !v),
-    },
-    {
       key: 'a',
-      handler: () => setShowFavActressOnly((v) => !v),
+      handler: () => {
+        setShowFavActressOnly((prev) => {
+          if (prev) setActiveFavActress('全部');
+          return !prev;
+        });
+      },
     },
     {
       key: 'u',
       handler: () => setShowUpcomingOnly((v) => !v),
     },
   ]);
- 
-  const categories = useMemo(
-    () => ['全部', ...Array.from(new Set(movies.map((m) => m.category)))],
-    [movies]
-  );
 
   const favoriteMovies = useMemo(() => {
     return movies.filter((m) => isFavorite(m.code));
   }, [movies, isFavorite]);
 
-  const actressCountsInFavorites = useMemo(
-    () => countActressAppearances(favoriteMovies.map((m) => m.actress)),
-    [favoriteMovies]
-  );
-
-  const availableActressesOrdered = useMemo(() => {
-    const names = Object.keys(actressCountsInFavorites);
-    names.sort((a, b) => {
-      const countA = actressCountsInFavorites[a];
-      const countB = actressCountsInFavorites[b];
-      if (countB !== countA) {
-        return countB - countA;
-      }
-      return a.localeCompare(b);
-    });
-    return ['全部', ...names];
-  }, [actressCountsInFavorites]);
- 
   const favActressSet = useMemo(
     () => new Set(preferredActresses.map((a) => a.trim().toLowerCase()).filter(Boolean)),
     [preferredActresses]
   );
+
+  // 僅在「喜愛女優」模式下統計名單內女優的作品數
+  const favActressCounts = useMemo(() => {
+    if (!showFavActressOnly) return {};
+    const counts: Record<string, number> = {};
+    for (const act of preferredActresses) {
+      const trimmed = act.trim();
+      if (!trimmed) continue;
+      const count = movies.filter((m) =>
+        (!!m.actress && matchActress(trimmed, m.actress)) || matchActress(trimmed, m.title)
+      ).length;
+      if (count > 0) {
+        counts[trimmed] = count;
+      }
+    }
+    return counts;
+  }, [showFavActressOnly, preferredActresses, movies]);
+
+  // 喜愛女優篩選下拉選單選項（按 A-Z / 筆劃排序）
+  const availableFavActressesOrdered = useMemo(() => {
+    const names = Object.keys(favActressCounts);
+    names.sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+    return ['全部', ...names];
+  }, [favActressCounts]);
  
   const filtered = useMemo(() => {
     // 預售新片走獨立來源，直接轉換為 Movie 格式
@@ -107,11 +107,11 @@ export function HomeView({ initialMovies }: HomeViewProps) {
           // 預售新片若已小於今日日期則剔除
           if (m.releaseDate && m.releaseDate < today) return false;
           const q = searchQuery.toLowerCase();
-          return (
+          const matchesSearch =
             m.title.toLowerCase().includes(q) ||
             m.code.toLowerCase().includes(q) ||
-            (m.actress ?? '').toLowerCase().includes(q)
-          );
+            (m.actress ?? '').toLowerCase().includes(q);
+          return matchesSearch;
         })
         .map((m) => ({
           code: m.code,
@@ -141,42 +141,58 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         m.title.toLowerCase().includes(q) ||
         m.code.toLowerCase().includes(q) ||
         (m.actress ?? '').toLowerCase().includes(q);
-      const matchesCategory = showFavoritesOnly || activeCategory === '全部' || m.category === activeCategory;
       const matchesFav = !showFavoritesOnly || isFavorite(m.code);
-      const matchesFavActressInFavorites = !showFavoritesOnly || activeActress === '全部' || (!!m.actress && matchActress(activeActress, m.actress));
-      const matchesRecommended = !showRecommendedOnly || m.matchTier === 'high';
-      const matchesFavActress =
-        !showFavActressOnly ||
-        (!!m.actress &&
-          m.actress
-            .split(ACTRESS_SPLIT_REGEX)
-            .map((a) => a.toLowerCase().trim())
-            .filter(Boolean)
-            .some((a) => favActressSet.has(a))) ||
-        preferredActresses.some((name) => matchActress(name, m.title));
-      return (
-        matchesSearch && matchesCategory && matchesFav &&
-        matchesRecommended && matchesFavActress && matchesFavActressInFavorites
-      );
+
+      // 只有喜愛女優模式才進行女優篩選
+      let matchesFavActress = true;
+      if (showFavActressOnly) {
+        if (activeFavActress !== '全部') {
+          matchesFavActress =
+            (!!m.actress && matchActress(activeFavActress, m.actress)) ||
+            matchActress(activeFavActress, m.title);
+        } else {
+          matchesFavActress =
+            (!!m.actress &&
+              m.actress
+                .split(ACTRESS_SPLIT_REGEX)
+                .map((a) => a.toLowerCase().trim())
+                .filter(Boolean)
+                .some((a) => favActressSet.has(a))) ||
+            preferredActresses.some((name) => matchActress(name, m.title));
+        }
+      }
+
+      return matchesSearch && matchesFav && matchesFavActress;
     });
  
-    if (sortBy === 'release') {
-      // 有 releaseDate 的排前面（DESC），無的排最後
+    if (sortBy === 'actress') {
+      // 依女優名稱 A-Z / 筆劃排序，無女優的排最後
       return [...result].sort((a, b) => {
-        if (!a.releaseDate && !b.releaseDate) return 0;
-        if (!a.releaseDate) return 1;
-        if (!b.releaseDate) return -1;
-        return b.releaseDate.localeCompare(a.releaseDate);
+        const nameA = a.actress || '';
+        const nameB = b.actress || '';
+        if (!nameA && !nameB) return 0;
+        if (!nameA) return 1;
+        if (!nameB) return -1;
+        return nameA.localeCompare(nameB, 'zh-Hant');
       });
     }
-    if (sortBy === 'match') {
-      // 依口味契合度 DESC，未評分的排最後
-      return [...result].sort((a, b) => (b.matchScore ?? -1) - (a.matchScore ?? -1));
+
+    if (sortBy === 'maker') {
+      // 依廠商名稱 A-Z 排序，無廠商的排最後
+      return [...result].sort((a, b) => {
+        const makerA = a.maker || '';
+        const makerB = b.maker || '';
+        if (!makerA && !makerB) return 0;
+        if (!makerA) return 1;
+        if (!makerB) return -1;
+        return makerA.localeCompare(makerB, 'zh-Hant');
+      });
     }
-    return result; // 'added' = DB 預設順序 (created_at DESC)
+
+    return result; // 'added' = DB 預設新增時間降冪順序 (created_at DESC)
   }, [
-    movies, upcomingMovies, searchQuery, activeCategory, activeActress, showFavoritesOnly,
-    showRecommendedOnly, showFavActressOnly, showUpcomingOnly, favActressSet, isFavorite, sortBy,
+    movies, upcomingMovies, searchQuery, activeFavActress, showFavoritesOnly,
+    showFavActressOnly, showUpcomingOnly, favActressSet, preferredActresses, isFavorite, sortBy,
   ]);
  
   // 篩選/搜尋/排序條件的指紋；變動時 MovieGrid 自動回到第一頁。
@@ -185,26 +201,32 @@ export function HomeView({ initialMovies }: HomeViewProps) {
     () =>
       JSON.stringify([
         searchQuery,
-        activeCategory,
-        activeActress,
+        activeFavActress,
         showFavoritesOnly,
-        showRecommendedOnly,
         showFavActressOnly,
         showUpcomingOnly,
         sortBy,
       ]),
-    [searchQuery, activeCategory, activeActress, showFavoritesOnly, showRecommendedOnly, showFavActressOnly, showUpcomingOnly, sortBy]
+    [searchQuery, activeFavActress, showFavoritesOnly, showFavActressOnly, showUpcomingOnly, sortBy]
   );
  
   const handleResetFilters = () => {
     setSearchQuery('');
-    setActiveCategory('全部');
-    setActiveActress('全部');
+    setActiveFavActress('全部');
     setShowFavoritesOnly(false);
-    setShowRecommendedOnly(false);
     setShowFavActressOnly(false);
     setShowUpcomingOnly(false);
     setSortBy('added');
+  };
+
+  const handleSelectMovie = (movie: Movie) => {
+    setSelectedMovie(movie);
+    // 記錄已瀏覽/點進去過的影片（避免兩週後被視為未讀清理）
+    fetch('/api/movies/viewed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: movie.code }),
+    }).catch((err) => console.warn('Record view failed:', err));
   };
 
   const handleSubmitAdd = async (url: string) => {
@@ -216,51 +238,42 @@ export function HomeView({ initialMovies }: HomeViewProps) {
       <Header
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        categories={showFavoritesOnly ? availableActressesOrdered : categories}
-        activeCategory={showFavoritesOnly ? activeActress : activeCategory}
-        onCategoryChange={showFavoritesOnly ? setActiveActress : setActiveCategory}
-        dropdownLabel={showFavoritesOnly ? '女優' : '分類'}
-        dropdownGetLabel={showFavoritesOnly ? (val) => (val === '全部' ? '全部' : `${val} (${actressCountsInFavorites[val] || 0})`) : undefined}
+        categories={availableFavActressesOrdered}
+        activeCategory={activeFavActress}
+        onCategoryChange={setActiveFavActress}
+        showCategoryDropdown={showFavActressOnly && !showUpcomingOnly}
+        dropdownLabel="女優篩選"
+        dropdownGetLabel={(val) =>
+          val === '全部' ? '全部喜愛女優' : `${val} (${favActressCounts[val] || 0})`
+        }
         showFavoritesOnly={showFavoritesOnly}
         onToggleFavoritesOnly={() => {
           const next = !showFavoritesOnly;
           setShowFavoritesOnly(next);
-          setShowRecommendedOnly(false);
           setShowFavActressOnly(false);
           setShowUpcomingOnly(false);
-          if (!next) {
-            setActiveActress('全部');
-          }
-        }}
-        showRecommendedOnly={showRecommendedOnly}
-        onToggleRecommendedOnly={() => {
-          setShowRecommendedOnly((v) => !v);
-          setShowFavoritesOnly(false);
-          setShowFavActressOnly(false);
-          setShowUpcomingOnly(false);
+          setActiveFavActress('全部');
         }}
         showFavActressOnly={showFavActressOnly}
         onToggleFavActressOnly={() => {
-          setShowFavActressOnly((v) => !v);
+          const next = !showFavActressOnly;
+          setShowFavActressOnly(next);
           setShowFavoritesOnly(false);
-          setShowRecommendedOnly(false);
           setShowUpcomingOnly(false);
+          setActiveFavActress('全部');
         }}
         showUpcomingOnly={showUpcomingOnly}
         onToggleUpcomingOnly={() => {
           setShowUpcomingOnly((v) => !v);
           setShowFavoritesOnly(false);
-          setShowRecommendedOnly(false);
           setShowFavActressOnly(false);
+          setActiveFavActress('全部');
         }}
         onAddMovie={() => setAddOpen(true)}
         isAdding={addMovie.isPending}
         totalCount={filtered.length}
         searchInputRef={searchInputRef}
         sortBy={sortBy}
-        onToggleSort={() =>
-          setSortBy((v) => (v === 'added' ? 'release' : v === 'release' ? 'match' : 'added'))
-        }
         onChangeSort={setSortBy}
         onResetFilters={handleResetFilters}
       />
@@ -269,7 +282,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
           movies={filtered}
           favorites={favorites}
           onToggleFavorite={toggleFavorite}
-          onSelectMovie={setSelectedMovie}
+          onSelectMovie={handleSelectMovie}
           resetKey={pageResetKey}
           onDeleteUpcoming={(code) => deleteUpcoming.mutate(code)}
         />
