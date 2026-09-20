@@ -12,6 +12,7 @@ import {
   type MovieFeatures,
 } from '@/lib/taste/core';
 import type { Movie } from '@/types/av';
+import { shouldUpgradeSource } from '@/lib/manual-movie';
 
 /** 解析 DB tags 欄（JSON string[]），壞資料/空值回空陣列。 */
 const parseTags = (raw: string | null): string[] => {
@@ -241,6 +242,42 @@ export const insertMovie = async (data: MovieInsert): Promise<Movie | null> => {
     .where(eq(movies.code, data.code))
     .limit(1);
   return inserted[0] ? enrich(inserted[0], cfg.preferredActresses) : null;
+};
+
+export type UpsertMovieResult = {
+  movie: Movie;
+  outcome: 'inserted' | 'upgraded' | 'existing';
+};
+
+/**
+ * 手動新增遇到同番號時，不再一律失敗：僅較高優先度片源可更新既有連結。
+ * 空白封面/標題不覆蓋原有資料，避免被遭封鎖的詳情頁降級。
+ */
+export const upsertMovieBySourcePriority = async (data: MovieInsert): Promise<UpsertMovieResult> => {
+  const cfg = await getConfig();
+  const existing = await db.select().from(movies).where(eq(movies.code, data.code)).limit(1);
+
+  if (existing.length === 0) {
+    await db.insert(movies).values(data);
+    const inserted = await db.select().from(movies).where(eq(movies.code, data.code)).limit(1);
+    return { movie: enrich(inserted[0], cfg.preferredActresses), outcome: 'inserted' };
+  }
+
+  const current = existing[0];
+  if (!shouldUpgradeSource(current.source, data.source)) {
+    return { movie: enrich(current, cfg.preferredActresses), outcome: 'existing' };
+  }
+
+  await db.update(movies).set({
+    url: data.url,
+    source: data.source,
+    ...(data.imageUrl ? { imageUrl: data.imageUrl } : {}),
+    ...(data.title && data.title !== data.code ? { title: data.title } : {}),
+    ...(data.tags ? { tags: data.tags } : {}),
+    ...(data.actress ? { actress: data.actress } : {}),
+  }).where(eq(movies.code, data.code));
+  const updated = await db.select().from(movies).where(eq(movies.code, data.code)).limit(1);
+  return { movie: enrich(updated[0], cfg.preferredActresses), outcome: 'upgraded' };
 };
 
 export const listFavorites = async (): Promise<string[]> => {

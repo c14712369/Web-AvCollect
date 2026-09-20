@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import * as cheerio from 'cheerio';
-import { insertMovie, listMovies, deleteMovie } from '@/lib/db/queries';
+import { upsertMovieBySourcePriority, listMovies, deleteMovie } from '@/lib/db/queries';
 import { addMovieSchema } from '@/lib/validators';
 import { extractTagsBySource, extractActressBySource } from '@/lib/scrape/detail-tags';
+import { getManualMovieIdentity } from '@/lib/manual-movie';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,11 +103,8 @@ export async function POST(req: Request) {
     }
     const { url } = parsed.data;
 
-    let source = 'Unknown';
-    if (url.includes('jable.tv')) source = 'Jable';
-    else if (url.includes('missav')) source = 'MissAV';
-    else if (url.includes('javrate.com')) source = 'Javrate';
-    else if (url.includes('supjav.com')) source = 'SupJav';
+    const identity = getManualMovieIdentity(url);
+    const source = identity.source;
 
     let { html, status } = await fetchDirect(url);
     let $ = cheerio.load(html);
@@ -131,19 +129,19 @@ export async function POST(req: Request) {
       title = parseTitle($);
     }
 
-    // 代理也失敗就回明確錯誤，別把「Attention Required! | Cloudflare」之類垃圾存進 DB
-    if (looksBlocked(status, title)) {
+    // 詳情頁被封鎖時仍可用網址中的番號建立收藏；避免把挑戰頁標題存進 DB。
+    const metadataUnavailable = looksBlocked(status, title);
+    if (metadataUnavailable && !identity.code) {
       return NextResponse.json(
-        {
-          success: false,
-          error: `${source} 受 Cloudflare 保護，連代理都抓不到，請稍後再試`,
-        },
+        { success: false, error: `${source} 詳情頁受保護，且網址無法辨識番號` },
         { status: 502 }
       );
     }
 
     // 去掉標題尾端的站名後綴（如「… | Javrate」），同時讓女優名落在標題結尾以利擷取
-    title = title.replace(/\s*[|｜]\s*(?:Javrate|Jable|MissAV|SupJav)\s*$/i, '').trim();
+    title = metadataUnavailable
+      ? identity.code!
+      : title.replace(/\s*[|｜]\s*(?:Javrate|Jable|MissAV|SupJav)\s*$/i, '').trim();
 
     let imageUrl = $('meta[property="og:image"]').attr('content') || '';
 
@@ -155,7 +153,9 @@ export async function POST(req: Request) {
     const titleMatch = title.match(codeRegex);
     const urlMatch = url.match(urlRegex);
 
-    if (titleMatch) {
+    if (identity.code) {
+      code = identity.code;
+    } else if (titleMatch) {
       code = titleMatch[0].toUpperCase();
     } else if (urlMatch) {
       code = urlMatch[1].toUpperCase();
@@ -184,7 +184,7 @@ export async function POST(req: Request) {
     // 從結構化欄位抓女優名（比 regex 從標題猜可靠得多）
     const actress = extractActressBySource(source, $);
 
-    const movie = await insertMovie({
+    const result = await upsertMovieBySourcePriority({
       code,
       title,
       url,
@@ -195,14 +195,7 @@ export async function POST(req: Request) {
       actress,
     });
 
-    if (!movie) {
-      return NextResponse.json({
-        success: false,
-        error: '番號已存在',
-      }, { status: 409 });
-    }
-
-    return NextResponse.json({ success: true, movie });
+    return NextResponse.json({ success: true, movie: result.movie, outcome: result.outcome });
   } catch (error) {
     console.error('[POST /api/movies]', error);
     return NextResponse.json(
