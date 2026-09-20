@@ -16,8 +16,6 @@ export function upgradeImageUrl(url: string, source: string): string {
     finalUrl = url.replace(/\/320x180\/\d+\.jpg$/, '/preview.jpg');
   } else if (source === 'MissAV') {
     finalUrl = url.replace('cover-t.jpg', 'cover-n.jpg');
-  } else if (source === 'Javrate') {
-    finalUrl = url.replace('_thumbnail.webp', '.webp');
   } else if (source === 'SupJav') {
     // `!320x216.jpg` 之類的後綴是縮圖參數，去掉即全尺寸
     finalUrl = url.replace(/!\d+x\d+\.jpg$/, '');

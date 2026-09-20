@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { Loader2 } from 'lucide-react';
 import type { Movie } from '@/types/av';
 import { Header, type SortOption } from './Header';
 import { MovieGrid } from './MovieGrid';
@@ -11,7 +12,10 @@ import { usePreferredActresses } from '@/hooks/usePreferredActresses';
 import { useAddMovie, useMovies } from '@/hooks/useMovies';
 import { useUpcomingMovies, useDeleteUpcomingMovie } from '@/hooks/useUpcomingMovies';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { ACTRESS_SPLIT_REGEX, matchActress } from '@/lib/actress-matcher';
+import { ACTRESS_SPLIT_REGEX, countActressAppearances, matchActress } from '@/lib/actress-matcher';
+import { sortMovies, type SortDirection } from '@/lib/movie-sort';
+import { toIsoTimestamp } from '@/lib/client-state';
+import { shouldFetchUpcoming, UPCOMING_PREFETCH_DELAY_MS } from '@/lib/interaction-performance';
 
 interface HomeViewProps {
   initialMovies: Movie[];
@@ -28,16 +32,52 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [showFavActressOnly, setShowFavActressOnly] = useState(false);
   const [showUpcomingOnly, setShowUpcomingOnly] = useState(false);
+  const [isUpcomingLoadPending, setUpcomingLoadPending] = useState(false);
+  const [upcomingPrefetchReady, setUpcomingPrefetchReady] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('added');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [isSwitchingView, startViewTransition] = useTransition();
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // 篩選、排序與分頁屬於可延後的畫面切換：先讓載入遮罩繪製，再更新卡片清單。
+  const switchView = (action: () => void) => startViewTransition(action);
  
-  // 預售新片 (改與 showUpcomingOnly 連動)
-  const { data: upcomingMovies = [], isLoading: upcomingLoading } = useUpcomingMovies({
-    enabled: showUpcomingOnly,
+  // 首頁穩定後在背景預抓預售資料；使用者若先點擊，仍立即請求。
+  useEffect(() => {
+    const timer = window.setTimeout(() => setUpcomingPrefetchReady(true), UPCOMING_PREFETCH_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  // 預售新片
+  const {
+    data: upcomingMovies = [],
+    isLoading: upcomingLoading,
+    isFetching: upcomingFetching,
+    isSuccess: upcomingLoaded,
+    isError: upcomingFailed,
+  } = useUpcomingMovies({
+    enabled: shouldFetchUpcoming(upcomingPrefetchReady, showUpcomingOnly),
   });
   const deleteUpcoming = useDeleteUpcomingMovie();
+
+  // 點擊當下先開啟遮罩，避免 query 尚未回報 isLoading 前先短暫渲染空清單。
+  const toggleUpcomingView = () => {
+    if (!showUpcomingOnly) setUpcomingLoadPending(true);
+    switchView(() => {
+      setShowUpcomingOnly((v) => !v);
+      setShowFavoritesOnly(false);
+      setShowFavActressOnly(false);
+      setActiveFavActress('全部');
+    });
+  };
+
+  useEffect(() => {
+    if (!showUpcomingOnly || ((upcomingLoaded || upcomingFailed) && !upcomingLoading && !upcomingFetching)) {
+      setUpcomingLoadPending(false);
+    }
+  }, [showUpcomingOnly, upcomingLoading, upcomingFetching, upcomingLoaded, upcomingFailed]);
  
   useKeyboardShortcuts([
     {
@@ -48,20 +88,20 @@ export function HomeView({ initialMovies }: HomeViewProps) {
     },
     {
       key: 'f',
-      handler: () => setShowFavoritesOnly((v) => !v),
+      handler: () => switchView(() => setShowFavoritesOnly((v) => !v)),
     },
     {
       key: 'a',
-      handler: () => {
+      handler: () => switchView(() => {
         setShowFavActressOnly((prev) => {
           if (prev) setActiveFavActress('全部');
           return !prev;
         });
-      },
+      }),
     },
     {
       key: 'u',
-      handler: () => setShowUpcomingOnly((v) => !v),
+      handler: toggleUpcomingView,
     },
   ]);
 
@@ -74,8 +114,11 @@ export function HomeView({ initialMovies }: HomeViewProps) {
     [preferredActresses]
   );
 
-  // 僅在「喜愛女優」模式下統計名單內女優的作品數
+  // 收藏限定時可從所有收藏作品篩女優；一般「喜愛女優」模式僅列手動追蹤名單。
   const favActressCounts = useMemo(() => {
+    if (showFavoritesOnly) {
+      return countActressAppearances(favoriteMovies.map((m) => m.actress));
+    }
     if (!showFavActressOnly) return {};
     const counts: Record<string, number> = {};
     for (const act of preferredActresses) {
@@ -89,9 +132,9 @@ export function HomeView({ initialMovies }: HomeViewProps) {
       }
     }
     return counts;
-  }, [showFavActressOnly, preferredActresses, movies]);
+  }, [showFavoritesOnly, showFavActressOnly, favoriteMovies, preferredActresses, movies]);
 
-  // 喜愛女優篩選下拉選單選項（按 A-Z / 筆劃排序）
+  // 女優篩選下拉選單選項（按 A-Z / 筆劃排序）
   const availableFavActressesOrdered = useMemo(() => {
     const names = Object.keys(favActressCounts);
     names.sort((a, b) => a.localeCompare(b, 'zh-Hant'));
@@ -124,6 +167,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
           maker: '',
           themes: [],
           actress: m.actress,
+          addedAt: toIsoTimestamp(m.createdAt),
         })) as Movie[];
 
       // 預售新片依發行日期升冪排列 (ASC)，無日期的排在最後
@@ -143,56 +187,30 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         (m.actress ?? '').toLowerCase().includes(q);
       const matchesFav = !showFavoritesOnly || isFavorite(m.code);
 
-      // 只有喜愛女優模式才進行女優篩選
+      // 收藏限定與喜愛女優模式都可搭配女優篩選。
       let matchesFavActress = true;
-      if (showFavActressOnly) {
-        if (activeFavActress !== '全部') {
-          matchesFavActress =
-            (!!m.actress && matchActress(activeFavActress, m.actress)) ||
-            matchActress(activeFavActress, m.title);
-        } else {
-          matchesFavActress =
-            (!!m.actress &&
-              m.actress
-                .split(ACTRESS_SPLIT_REGEX)
-                .map((a) => a.toLowerCase().trim())
-                .filter(Boolean)
-                .some((a) => favActressSet.has(a))) ||
-            preferredActresses.some((name) => matchActress(name, m.title));
-        }
+      if (activeFavActress !== '全部' && (showFavoritesOnly || showFavActressOnly)) {
+        matchesFavActress =
+          (!!m.actress && matchActress(activeFavActress, m.actress)) ||
+          matchActress(activeFavActress, m.title);
+      } else if (showFavActressOnly) {
+        matchesFavActress =
+          (!!m.actress &&
+            m.actress
+              .split(ACTRESS_SPLIT_REGEX)
+              .map((a) => a.toLowerCase().trim())
+              .filter(Boolean)
+              .some((a) => favActressSet.has(a))) ||
+          preferredActresses.some((name) => matchActress(name, m.title));
       }
 
       return matchesSearch && matchesFav && matchesFavActress;
     });
  
-    if (sortBy === 'actress') {
-      // 依女優名稱 A-Z / 筆劃排序，無女優的排最後
-      return [...result].sort((a, b) => {
-        const nameA = a.actress || '';
-        const nameB = b.actress || '';
-        if (!nameA && !nameB) return 0;
-        if (!nameA) return 1;
-        if (!nameB) return -1;
-        return nameA.localeCompare(nameB, 'zh-Hant');
-      });
-    }
-
-    if (sortBy === 'maker') {
-      // 依廠商名稱 A-Z 排序，無廠商的排最後
-      return [...result].sort((a, b) => {
-        const makerA = a.maker || '';
-        const makerB = b.maker || '';
-        if (!makerA && !makerB) return 0;
-        if (!makerA) return 1;
-        if (!makerB) return -1;
-        return makerA.localeCompare(makerB, 'zh-Hant');
-      });
-    }
-
-    return result; // 'added' = DB 預設新增時間降冪順序 (created_at DESC)
+    return sortMovies(result, sortBy, sortDirection);
   }, [
     movies, upcomingMovies, searchQuery, activeFavActress, showFavoritesOnly,
-    showFavActressOnly, showUpcomingOnly, favActressSet, preferredActresses, isFavorite, sortBy,
+    showFavActressOnly, showUpcomingOnly, favActressSet, preferredActresses, isFavorite, sortBy, sortDirection,
   ]);
  
   // 篩選/搜尋/排序條件的指紋；變動時 MovieGrid 自動回到第一頁。
@@ -206,18 +224,20 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         showFavActressOnly,
         showUpcomingOnly,
         sortBy,
+        sortDirection,
       ]),
-    [searchQuery, activeFavActress, showFavoritesOnly, showFavActressOnly, showUpcomingOnly, sortBy]
+    [searchQuery, activeFavActress, showFavoritesOnly, showFavActressOnly, showUpcomingOnly, sortBy, sortDirection]
   );
  
-  const handleResetFilters = () => {
+  const handleResetFilters = () => switchView(() => {
     setSearchQuery('');
     setActiveFavActress('全部');
     setShowFavoritesOnly(false);
     setShowFavActressOnly(false);
     setShowUpcomingOnly(false);
     setSortBy('added');
-  };
+    setSortDirection('desc');
+  });
 
   const handleSelectMovie = (movie: Movie) => {
     setSelectedMovie(movie);
@@ -240,41 +260,44 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         onSearchChange={setSearchQuery}
         categories={availableFavActressesOrdered}
         activeCategory={activeFavActress}
-        onCategoryChange={setActiveFavActress}
-        showCategoryDropdown={showFavActressOnly && !showUpcomingOnly}
+        onCategoryChange={(value) => switchView(() => setActiveFavActress(value))}
+        showCategoryDropdown={(showFavoritesOnly || showFavActressOnly) && !showUpcomingOnly}
         dropdownLabel="女優篩選"
         dropdownGetLabel={(val) =>
-          val === '全部' ? '全部喜愛女優' : `${val} (${favActressCounts[val] || 0})`
+          val === '全部'
+            ? showFavoritesOnly ? '全部收藏女優' : '全部喜愛女優'
+            : `${val} (${favActressCounts[val] || 0})`
         }
         showFavoritesOnly={showFavoritesOnly}
-        onToggleFavoritesOnly={() => {
+        onToggleFavoritesOnly={() => switchView(() => {
           const next = !showFavoritesOnly;
           setShowFavoritesOnly(next);
-          setShowFavActressOnly(false);
           setShowUpcomingOnly(false);
-          setActiveFavActress('全部');
-        }}
+          if (!next && !showFavActressOnly) setActiveFavActress('全部');
+        })}
         showFavActressOnly={showFavActressOnly}
-        onToggleFavActressOnly={() => {
+        onToggleFavActressOnly={() => switchView(() => {
           const next = !showFavActressOnly;
           setShowFavActressOnly(next);
-          setShowFavoritesOnly(false);
           setShowUpcomingOnly(false);
-          setActiveFavActress('全部');
-        }}
+          if (!next && !showFavoritesOnly) setActiveFavActress('全部');
+        })}
         showUpcomingOnly={showUpcomingOnly}
-        onToggleUpcomingOnly={() => {
-          setShowUpcomingOnly((v) => !v);
-          setShowFavoritesOnly(false);
-          setShowFavActressOnly(false);
-          setActiveFavActress('全部');
-        }}
+        onToggleUpcomingOnly={toggleUpcomingView}
         onAddMovie={() => setAddOpen(true)}
         isAdding={addMovie.isPending}
         totalCount={filtered.length}
         searchInputRef={searchInputRef}
         sortBy={sortBy}
-        onChangeSort={setSortBy}
+        sortDirection={sortDirection}
+        onChangeSort={(nextSort) => switchView(() => {
+          if (nextSort === sortBy) {
+            setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+          } else {
+            setSortBy(nextSort);
+            setSortDirection(nextSort === 'added' ? 'desc' : 'asc');
+          }
+        })}
         onResetFilters={handleResetFilters}
       />
       <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-10">
@@ -284,6 +307,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
           onToggleFavorite={toggleFavorite}
           onSelectMovie={handleSelectMovie}
           resetKey={pageResetKey}
+          onPageChange={(navigate) => switchView(navigate)}
           onDeleteUpcoming={(code) => deleteUpcoming.mutate(code)}
         />
       </div>
@@ -298,6 +322,24 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         onSubmit={handleSubmitAdd}
         isSubmitting={addMovie.isPending}
       />
+      {(isSwitchingView || isUpcomingLoadPending || (showUpcomingOnly && upcomingLoading)) && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/75 px-6 backdrop-blur-sm"
+          role="status"
+          aria-live="polite"
+          aria-label="正在切換畫面"
+        >
+          <div className="flex items-center gap-3 rounded-2xl border border-indigo-400/25 bg-zinc-900/90 px-5 py-4 shadow-2xl shadow-indigo-950/50">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/15">
+              <Loader2 className="h-5 w-5 animate-spin text-indigo-300" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">{isUpcomingLoadPending || upcomingLoading ? '正在抓取預售新片' : '正在切換畫面'}</p>
+              <p className="mt-0.5 text-xs text-white/45">請稍候，暫時無法操作其他功能</p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
         <div className="absolute top-0 -left-1/4 h-[500px] w-[500px] rounded-full bg-indigo-500/5 blur-[120px]" />
         <div className="absolute bottom-0 -right-1/4 h-[500px] w-[500px] rounded-full bg-violet-500/5 blur-[120px]" />

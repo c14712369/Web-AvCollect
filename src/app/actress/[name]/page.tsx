@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft, User } from 'lucide-react';
 import { listMovies } from '@/lib/db/queries';
 import { ActressView } from '@/components/ActressView';
+import { matchActress } from '@/lib/actress-matcher';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,9 @@ export default async function ActressPage({ params }: PageProps) {
   const name = decodeURIComponent(encoded);
 
   const all = await listMovies();
-  const works = all.filter((m) => m.actress === name);
+  const works = all.filter((m) =>
+    (m.actress && matchActress(name, m.actress)) || matchActress(name, m.title)
+  );
 
   if (works.length === 0) {
     return (

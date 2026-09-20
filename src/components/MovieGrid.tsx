@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { Info } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { Movie } from '@/types/av';
+import { pageFromSearchParam } from '@/lib/client-state';
 import { AvCard } from './AvCard';
 import { Pagination } from './Pagination';
 
@@ -17,6 +19,8 @@ interface MovieGridProps {
   /** 此值變動時自動跳回第一頁（用來在篩選/搜尋改變時 reset）。 */
   resetKey?: string;
   onDeleteUpcoming?: (code: string) => void;
+  /** 由外層以 transition 包裹分頁導覽，讓載入遮罩能先繪製。 */
+  onPageChange?: (navigate: () => void) => void;
 }
 
 export function MovieGrid({
@@ -27,21 +31,36 @@ export function MovieGrid({
   pageSize = 24,
   resetKey,
   onDeleteUpcoming,
+  onPageChange,
 }: MovieGridProps) {
-  const [page, setPage] = useState(1);
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const page = pageFromSearchParam(searchParams.get('page'));
+  const previousResetKey = useRef(resetKey);
+
+  const setUrlPage = useCallback((nextPage: number, mode: 'push' | 'replace') => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextPage <= 1) params.delete('page');
+    else params.set('page', String(nextPage));
+    const query = params.toString();
+    router[mode](`${pathname}${query ? `?${query}` : ''}`, { scroll: false });
+  }, [pathname, router, searchParams]);
 
   // 篩選/搜尋條件改變 → 回到第一頁（收藏單顆 toggle 不會觸發，因為 resetKey 不含它）
   useEffect(() => {
-    setPage(1);
-  }, [resetKey]);
+    if (previousResetKey.current === resetKey) return;
+    previousResetKey.current = resetKey;
+    if (page > 1) setUrlPage(1, 'replace');
+  }, [resetKey, page, setUrlPage]);
 
   const totalPages = Math.max(1, Math.ceil(movies.length / pageSize));
   const safePage = Math.min(page, totalPages);
 
-  // 列表變短導致目前頁超出範圍時，把 state 收斂回合法頁
+  // 列表變短導致目前頁超出範圍時，把網址收斂回合法頁。
   useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+    if (page > totalPages) setUrlPage(totalPages, 'replace');
+  }, [page, totalPages, setUrlPage]);
 
   const pageItems = useMemo(
     () => movies.slice((safePage - 1) * pageSize, safePage * pageSize),
@@ -49,10 +68,14 @@ export function MovieGrid({
   );
 
   const goTo = (p: number) => {
-    setPage(p);
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    const navigate = () => {
+      setUrlPage(Math.min(Math.max(p, 1), totalPages), 'push');
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+    if (onPageChange) onPageChange(navigate);
+    else navigate();
   };
 
   if (movies.length === 0) {
@@ -74,26 +97,17 @@ export function MovieGrid({
   return (
     <div>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        <AnimatePresence mode="popLayout">
-          {pageItems.map((movie) => (
-            <motion.div
-              key={movie.code}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
-            >
-              <AvCard
-                movie={movie}
-                favorited={favorites.includes(movie.code)}
-                onToggleFavorite={onToggleFavorite}
-                onSelect={onSelectMovie}
-                onDeleteUpcoming={onDeleteUpcoming}
-              />
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        {pageItems.map((movie) => (
+          <div key={movie.code}>
+            <AvCard
+              movie={movie}
+              favorited={favorites.includes(movie.code)}
+              onToggleFavorite={onToggleFavorite}
+              onSelect={onSelectMovie}
+              onDeleteUpcoming={onDeleteUpcoming}
+            />
+          </div>
+        ))}
       </div>
 
       <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={goTo} />

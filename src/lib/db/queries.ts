@@ -45,6 +45,7 @@ const enrich = (row: typeof movies.$inferSelect, prefActresses: string[]): Movie
     imageUrl: row.imageUrl,
     source: row.source,
     category: row.category,
+    addedAt: row.createdAt.toISOString(),
     releaseDate: row.releaseDate ?? null,
     maker: extractMaker(row.code),
     themes: themesOf(row),

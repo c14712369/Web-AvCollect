@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Heart, Plus, Loader2, Database, Calendar, Clock, Settings, Star, User, Building2 } from 'lucide-react';
+import { LayoutGrid, Heart, Plus, Loader2, Database, Calendar, Clock, Settings, Star, User, Building2, ArrowDownAZ, ArrowUpAZ } from 'lucide-react';
 import { CategoryDropdown } from './CategoryDropdown';
 import { SearchInput } from './SearchInput';
 import { LogoutButton } from './LogoutButton';
+import type { SortDirection, SortOption } from '@/lib/movie-sort';
 
-export type SortOption = 'added' | 'actress' | 'maker';
+export type { SortOption } from '@/lib/movie-sort';
 
 interface HeaderProps {
   searchQuery: string;
@@ -25,6 +26,7 @@ interface HeaderProps {
   totalCount: number;
   searchInputRef?: React.Ref<HTMLInputElement>;
   sortBy: SortOption;
+  sortDirection: SortDirection;
   onChangeSort?: (v: SortOption) => void;
   onResetFilters?: () => void;
   showCategoryDropdown?: boolean;
@@ -41,7 +43,7 @@ export function Header(props: HeaderProps) {
     showUpcomingOnly, onToggleUpcomingOnly,
     onAddMovie, isAdding, totalCount,
     searchInputRef,
-    sortBy, onChangeSort,
+    sortBy, sortDirection, onChangeSort,
     onResetFilters,
     showCategoryDropdown = false,
     dropdownLabel,
@@ -122,6 +124,7 @@ export function Header(props: HeaderProps) {
                   >
                     {opt.icon}
                     <span className="text-xs font-bold tracking-wide">{opt.label}</span>
+                    {active && (sortDirection === 'asc' ? <ArrowUpAZ className="h-3 w-3" /> : <ArrowDownAZ className="h-3 w-3" />)}
                   </button>
                 );
               })}
@@ -139,6 +142,17 @@ export function Header(props: HeaderProps) {
               <span className="text-xs font-semibold tracking-wide">喜愛女優</span>
             </button>
             <button
+              onClick={onToggleFavoritesOnly}
+              className={`group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border ${
+                showFavoritesOnly
+                  ? 'bg-red-500/20 border-red-500/50 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
+                  : 'glass border-white/5 text-white/50 hover:text-white hover:border-white/20 hover:bg-white/5'
+              }`}
+            >
+              <Heart className={`h-4 w-4 transition-all duration-500 ${showFavoritesOnly ? 'fill-red-500 scale-110' : 'group-hover:scale-110 group-hover:text-red-400'}`} />
+              <span className="text-xs font-semibold tracking-wide">收藏限定</span>
+            </button>
+            <button
               onClick={onToggleUpcomingOnly}
               className={`group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border ${
                 showUpcomingOnly
@@ -149,17 +163,6 @@ export function Header(props: HeaderProps) {
             >
               <Calendar className={`h-4 w-4 transition-all duration-500 ${showUpcomingOnly ? 'scale-110' : 'group-hover:scale-110 group-hover:text-indigo-400'}`} />
               <span className="text-xs font-semibold tracking-wide">預售新片</span>
-            </button>
-            <button
-              onClick={onToggleFavoritesOnly}
-              className={`group flex items-center space-x-2 rounded-full px-5 py-2.5 transition-all duration-500 border ${
-                showFavoritesOnly
-                  ? 'bg-red-500/20 border-red-500/50 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
-                  : 'glass border-white/5 text-white/50 hover:text-white hover:border-white/20 hover:bg-white/5'
-              }`}
-            >
-              <Heart className={`h-4 w-4 transition-all duration-500 ${showFavoritesOnly ? 'fill-red-500 scale-110' : 'group-hover:scale-110 group-hover:text-red-400'}`} />
-              <span className="text-xs font-semibold tracking-wide">收藏限定</span>
             </button>
             <div className="ml-auto flex items-center gap-3">
               {showCategoryDropdown && (

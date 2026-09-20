@@ -7,6 +7,8 @@ export interface Movie {
   imageUrl: string;
   source: string;
   category: string;
+  /** 寫入收藏牆的時間（ISO 8601）；用於「新增時間」排序。 */
+  addedAt?: string;
   releaseDate?: string | null; // ISO YYYY-MM-DD
   maker: string;
   themes: string[];

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getImageReferer } from '@/lib/image-proxy';
 
 // 僅允許從這些網域代理圖片，避免 SSRF（探測內網 / 雲端 metadata）
 const ALLOWED_HOSTS = [
@@ -39,10 +40,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    let referer = 'https://missav.com/';
-    if (parsed.hostname.includes('jable')) referer = 'https://jable.tv/';
-    else if (parsed.hostname.includes('javrate') || parsed.hostname.includes('avking')) referer = 'https://javrate.com/';
-    else if (parsed.hostname.includes('supjav')) referer = 'https://supjav.com/';
+    const referer = getImageReferer(parsed);
     
     const response = await fetch(url, {
       headers: {
