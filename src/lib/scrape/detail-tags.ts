@@ -78,10 +78,18 @@ function jableActress($: CheerioAPI): string | null {
   return text || null;
 }
 
-/** Javrate：a[href*="/av-idol/"] 連結文字（排除導覽列共用連結）。 */
+/**
+ * Javrate：本片卡司只存在於 .actor-card 輪播內。
+ * .mgn-box（相關影片）同樣放 /actor/detail 連結，那是別人的女優，取到就是污染。
+ * 與 AvBatch 的 extractJavrateActress 同步。
+ */
 function javrateActress($: CheerioAPI): string | null {
-  const text = $('a[href*="/av-idol/"]').first().text().trim();
-  return text || null;
+  const names = $('.actor-card a')
+    .filter((_, a) => /\/actor\/detail/i.test($(a).attr('href') ?? ''))
+    .map((_, a) => $(a).text().trim())
+    .get()
+    .filter(Boolean);
+  return [...new Set(names)].join('、') || null;
 }
 
 /** SupJav：.post-meta a[href*="/actress/"] 連結文字。 */
