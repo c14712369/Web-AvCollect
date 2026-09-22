@@ -1,9 +1,17 @@
 import { desc, eq, and, lt, inArray, sql } from 'drizzle-orm';
 import { db } from './client';
-import { movies, favorites, appConfig, viewedMovies, type MovieInsert } from './schema';
+import {
+  movies,
+  favorites,
+  appConfig,
+  viewedMovies,
+  favoritesSnapshots,
+  type MovieInsert,
+} from './schema';
 import { extractMaker, extractThemes, extractActress } from '@/lib/metadata';
 import { matchActress } from '@/lib/actress-matcher';
 import { getConfig } from '@/lib/config';
+import { decideCleanup } from '@/lib/cleanup-guard';
 import {
   buildProfileFromFeatures,
   classify,
@@ -165,7 +173,22 @@ export async function cleanupStaleUnviewedMovies(force = false): Promise<number>
       toDelete.push(m.code);
     }
 
+    // 自動刪片不可逆，且仰賴收藏/瀏覽紀錄當保護傘：
+    // 保護訊號異常或單次刪除量過大時一律中止，等人確認（見 cleanup-guard）。
+    const [{ total }] = await db.select({ total: sql<number>`count(*)` }).from(movies);
+    const decision = decideCleanup({
+      totalMovies: Number(total),
+      favoritesCount: favCodes.size,
+      plannedDeletions: toDelete.length,
+    });
+    if (!decision.proceed) {
+      console.warn(`[cleanup] 已中止：${decision.reason}`);
+      console.warn(`[cleanup] 原本要刪的番號：${toDelete.join(', ')}`);
+      return 0;
+    }
+
     if (toDelete.length > 0) {
+      console.log(`[cleanup] 即將移除 ${toDelete.length} 部：${toDelete.join(', ')}`);
       const chunkSize = 100;
       for (let i = 0; i < toDelete.length; i += chunkSize) {
         const chunk = toDelete.slice(i, i + chunkSize);
@@ -285,7 +308,86 @@ export const listFavorites = async (): Promise<string[]> => {
   return rows.map((r) => r.code);
 };
 
+/** 單筆加入收藏；不動其他資料列（toggle 專用）。 */
+export const addFavorite = async (code: string): Promise<void> => {
+  await db.insert(favorites).values({ code }).onConflictDoNothing();
+};
+
+/** 單筆移除收藏；不動其他資料列（toggle 專用）。 */
+export const removeFavorite = async (code: string): Promise<void> => {
+  await db.delete(favorites).where(eq(favorites.code, code));
+};
+
+/** 收藏快照保留份數。 */
+const FAVORITES_SNAPSHOT_KEEP = 20;
+
+let ensuredSnapshotTable = false;
+/** 自動確保 favorites_snapshots 資料表存在。 */
+export async function ensureFavoritesSnapshotTable(): Promise<void> {
+  if (ensuredSnapshotTable) return;
+  try {
+    await db.run(
+      sql`CREATE TABLE IF NOT EXISTS favorites_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, taken_at INTEGER NOT NULL DEFAULT (unixepoch()), reason TEXT NOT NULL, codes TEXT NOT NULL)`
+    );
+    ensuredSnapshotTable = true;
+  } catch (e) {
+    console.warn('[db] ensureFavoritesSnapshotTable warning:', e);
+  }
+}
+
+/**
+ * 把目前的收藏清單留成快照（只保留最近 FAVORITES_SNAPSHOT_KEEP 份）。
+ * 空清單不留底，免得把真正有用的舊快照擠掉。
+ */
+export const snapshotFavorites = async (reason: string): Promise<void> => {
+  await ensureFavoritesSnapshotTable();
+  try {
+    const codes = await listFavorites();
+    if (codes.length === 0) return;
+    await db.insert(favoritesSnapshots).values({ reason, codes: JSON.stringify(codes) });
+    const keep = await db
+      .select({ id: favoritesSnapshots.id })
+      .from(favoritesSnapshots)
+      .orderBy(desc(favoritesSnapshots.id))
+      .limit(FAVORITES_SNAPSHOT_KEEP);
+    if (keep.length === FAVORITES_SNAPSHOT_KEEP) {
+      const oldest = keep[keep.length - 1].id;
+      await db.delete(favoritesSnapshots).where(lt(favoritesSnapshots.id, oldest));
+    }
+    console.log(`[favorites] 覆蓋前留下快照（${reason}）：${codes.length} 筆`);
+  } catch (err) {
+    console.warn('[favorites] snapshotFavorites failed:', err);
+  }
+};
+
+export interface FavoritesSnapshot {
+  takenAt: Date;
+  reason: string;
+  codes: string[];
+}
+
+/** 取回收藏快照，最新的排最前面。 */
+export const listFavoritesSnapshots = async (): Promise<FavoritesSnapshot[]> => {
+  await ensureFavoritesSnapshotTable();
+  const rows = await db
+    .select()
+    .from(favoritesSnapshots)
+    .orderBy(desc(favoritesSnapshots.id));
+  return rows.map((r) => ({
+    takenAt: r.takenAt,
+    reason: r.reason,
+    codes: parseTags(r.codes),
+  }));
+};
+
+/**
+ * 整份覆蓋收藏（僅供匯入使用）。
+ * 這是唯一會清空整張表的路徑，呼叫端必須是使用者明確要求覆蓋，
+ * 且一律先留下快照，讓覆蓋錯了還有得救。
+ */
 export const setFavorites = async (codes: string[]): Promise<void> => {
+  await snapshotFavorites('replace');
+  const before = await listFavorites();
   await db.transaction(async (tx) => {
     await tx.delete(favorites);
     if (codes.length === 0) return;
@@ -293,6 +395,7 @@ export const setFavorites = async (codes: string[]): Promise<void> => {
       .insert(favorites)
       .values(codes.map((code) => ({ code })));
   });
+  console.log(`[favorites] 整份覆蓋：${before.length} 筆 → ${codes.length} 筆`);
 };
 
 export const deleteMovie = async (code: string): Promise<boolean> => {

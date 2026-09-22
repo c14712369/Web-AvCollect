@@ -55,6 +55,16 @@ export const upcomingMovies = sqliteTable('upcoming_movies', {
     .default(sql`(unixepoch())`),
 });
 
+// 收藏清單快照：整份覆蓋（匯入）前自動留底，供事後還原
+export const favoritesSnapshots = sqliteTable('favorites_snapshots', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  takenAt: integer('taken_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  reason: text('reason').notNull(),
+  codes: text('codes').notNull(), // JSON 字串 string[]
+});
+
 // 影片瀏覽/點擊記錄表（記錄使用者點進去過的影片，防範過期誤刪）
 export const viewedMovies = sqliteTable('viewed_movies', {
   code: text('code').primaryKey(),
@@ -70,3 +80,4 @@ export type AppConfigRow = typeof appConfig.$inferSelect;
 export type UpcomingMovieRow = typeof upcomingMovies.$inferSelect;
 export type UpcomingMovieInsert = typeof upcomingMovies.$inferInsert;
 export type ViewedMovieRow = typeof viewedMovies.$inferSelect;
+export type FavoritesSnapshotRow = typeof favoritesSnapshots.$inferSelect;
