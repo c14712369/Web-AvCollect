@@ -70,3 +70,9 @@ test('listActressNames：括號內的別名/讀音視為同一人，不拆成另
   assert.deepEqual(listActressNames('天然美月（天然みづき） 伊藤舞雪'), ['天然美月', '伊藤舞雪']);
   assert.deepEqual(listActressNames(null), []);
 });
+
+test('countActressAppearances：括號別名不另成一位女優', () => {
+  const counts = countActressAppearances(['松本一香 (松本いちか)', '松本一香']);
+  assert.equal(Object.keys(counts).some((k) => k.includes('(') || k.includes('（')), false);
+  assert.equal(Object.values(counts).reduce((a, b) => a + b, 0), 2);
+});

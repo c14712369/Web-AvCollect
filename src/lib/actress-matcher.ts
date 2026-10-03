@@ -126,7 +126,8 @@ export function countActressAppearances(
 
   for (const field of actressFields) {
     if (!field) continue;
-    for (const raw of field.split(ACTRESS_SPLIT_REGEX)) {
+    // 括號內是別名/讀音，同一人不另計（listActressNames 已處理）
+    for (const raw of listActressNames(field)) {
       const form = raw.trim();
       if (!form) continue;
       const key = getActressVariants(form).sort().join('|');

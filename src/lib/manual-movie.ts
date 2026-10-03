@@ -75,7 +75,9 @@ export function isPlaceholderMovie(movie: { code: string; title: string; imageUr
   }
 }
 
-const ERROR_PAGE_TITLE = /^[45]\d{2}|Not Found|Attention Required|Just a moment|you have been blocked|Enable JavaScript and cookies/i;
+/** 錯誤頁標題：整串比對已知片語，避免「500 人斬り」「…NOT FOUND 特典」這類正常片名被誤判。 */
+const ERROR_PAGE_TITLE =
+  /^\s*(?:[45]\d{2}(?:\s*[-:|]?\s*(?:not found|forbidden|unauthorized|internal server error|bad gateway|service unavailable|gateway time-?out|error))?|(?:page\s+)?not\s+found)\s*$|Attention Required|Just a moment|you have been blocked|Enable JavaScript and cookies/i;
 
 /** 詳情頁回非 2xx（已下架 404、CF 403）或是挑戰頁 → 頁面上的標題/封面都不能用。 */
 export function isUnusableDetailPage(status: number, title: string): boolean {

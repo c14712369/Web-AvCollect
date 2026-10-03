@@ -17,9 +17,9 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   inputRef,
 }) => {
   return (
-    <div className="relative group w-full max-w-2xl">
-      <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-        <Search className="h-5 w-5 text-white/20 transition-colors group-focus-within:text-indigo-400" />
+    <div className="relative group w-full min-w-0 sm:max-w-md">
+      <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none">
+        <Search className="h-4 w-4 text-white/40 transition-colors group-focus-within:text-indigo-400" />
       </div>
       <input
         ref={inputRef}
@@ -27,13 +27,14 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        enterKeyHint="search"
+        aria-label="搜尋影片"
         className="
-          w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-12 pr-4
-          text-sm text-white placeholder:text-white/20
-          backdrop-blur-xl transition-all duration-300
+          h-10 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-4
+          text-base text-white placeholder:text-white/40 sm:pr-14 sm:text-sm
+          transition-[background-color,border-color,box-shadow] duration-200
           focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50
           focus:bg-white/10 hover:bg-white/10
-          shadow-lg shadow-black/20
         "
       />
       <div className="absolute right-4 inset-y-0 flex items-center pointer-events-none opacity-0 group-focus-within:opacity-100 transition-opacity">

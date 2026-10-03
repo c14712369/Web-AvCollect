@@ -25,6 +25,7 @@ const LONG_PRESS_TOLERANCE = 10;
 export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavorite, onOpen, onOpenMenu, onDeleteUpcoming }) => {
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (consumeLongPress()) return;
     onToggleFavorite(movie.code);
   };
 
@@ -32,6 +33,13 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
   const pressStart = React.useRef<{ x: number; y: number } | null>(null);
   // 長按叫出選單後，放開手指產生的 click 不能再開分頁
   const suppressClick = React.useRef(false);
+
+  /** 長按叫出選單後放開手指的那次 click 要吃掉；回傳是否吃掉。 */
+  const consumeLongPress = () => {
+    if (!suppressClick.current) return false;
+    suppressClick.current = false;
+    return true;
+  };
 
   const cancelPress = () => {
     if (pressTimer.current) window.clearTimeout(pressTimer.current);
@@ -75,10 +83,7 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
   };
 
   const handleClick = () => {
-    if (suppressClick.current) {
-      suppressClick.current = false;
-      return;
-    }
+    if (consumeLongPress()) return;
     onOpen(movie);
   };
 
@@ -101,7 +106,7 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
       role="link"
       tabIndex={0}
       aria-label={`${movie.code} ${movie.title}（右鍵或長按開啟選單）`}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] active:scale-[0.99] cursor-pointer select-none [-webkit-touch-callout:none] outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md transition-[transform,border-color,box-shadow] duration-300 ease-out hover:-translate-y-1 hover:scale-[1.02] hover:border-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] active:scale-[0.99] cursor-pointer select-none [-webkit-touch-callout:none] outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
       onClick={handleClick}
       onAuxClick={(e) => {
         if (e.button === 1) onOpen(movie);
@@ -147,8 +152,10 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
           <motion.button
             whileHover={{ scale: 1.15 }}
             whileTap={{ scale: 0.9 }}
+            aria-label={`刪除預售片 ${movie.code}`}
             onClick={(e) => {
               e.stopPropagation();
+              if (consumeLongPress()) return;
               onDeleteUpcoming(movie.code);
             }}
             className="absolute top-2 left-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/5 transition-colors hover:bg-rose-500/40"
@@ -160,6 +167,8 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
             whileHover={{ scale: 1.15 }}
             whileTap={{ scale: 0.9 }}
             onClick={handleFavoriteClick}
+            aria-label={favorited ? `取消收藏 ${movie.code}` : `收藏 ${movie.code}`}
+            aria-pressed={favorited}
             className="absolute top-2 left-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md border border-white/5 transition-colors hover:bg-black/60"
           >
             <Heart
@@ -197,7 +206,7 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
             )}
           </div>
         )}
-        <h3 className="truncate text-sm font-semibold leading-snug text-white/90 group-hover:text-white transition-colors" title={movie.title}>
+        <h3 className="line-clamp-2 min-h-[2.75em] text-sm font-semibold leading-snug text-white/90 group-hover:text-white transition-colors" title={movie.title}>
           {movie.title}
         </h3>
         {(movie.actress || movie.themes.length > 0) && (

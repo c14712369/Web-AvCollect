@@ -276,7 +276,10 @@ export type UpsertMovieResult = {
  * 手動新增遇到同番號時，不再一律失敗：僅較高優先度片源可更新既有連結。
  * 空白封面/標題不覆蓋原有資料，避免被遭封鎖的詳情頁降級。
  */
-export const upsertMovieBySourcePriority = async (data: MovieInsert): Promise<UpsertMovieResult> => {
+export const upsertMovieBySourcePriority = async (
+  data: MovieInsert,
+  opts: { metadataUnavailable?: boolean } = {}
+): Promise<UpsertMovieResult> => {
   const cfg = await getConfig();
   const existing = await db.select().from(movies).where(eq(movies.code, data.code)).limit(1);
 
@@ -287,7 +290,8 @@ export const upsertMovieBySourcePriority = async (data: MovieInsert): Promise<Up
   }
 
   const current = existing[0];
-  const upgrade = shouldUpgradeSource(current.source, data.source);
+  // 這次詳情頁被擋/已下架 → 拿到的只是猜測封面與番號，不可拿來覆蓋既有片源連結
+  const upgrade = !opts.metadataUnavailable && shouldUpgradeSource(current.source, data.source);
   // 既有資料是佔位片（標題=番號/錯誤頁、封面空白或死鏈）→ 這次抓到什麼就補什麼，即使同片源
   const patch = upgrade ? {} : getPlaceholderRepairPatch(current, data);
   if (!upgrade && !patch) {
@@ -406,6 +410,9 @@ export const setFavorites = async (codes: string[]): Promise<void> => {
 };
 
 export const deleteMovie = async (code: string): Promise<boolean> => {
+  const target = await db.select({ code: movies.code, title: movies.title }).from(movies).where(eq(movies.code, code)).limit(1);
+  // 守則③：刪除前記錄刪什麼、幾筆
+  console.info(`[deleteMovie] 刪除 ${target.length} 筆：${code}${target[0] ? ` ${target[0].title}` : ''}`);
   await db.delete(movies).where(eq(movies.code, code));
   return true;
 };

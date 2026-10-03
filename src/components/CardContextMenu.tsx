@@ -60,7 +60,7 @@ function MenuPanel({ state, onClose, favorited, onToggleFavorite, onDeleteUpcomi
   const panelRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ left: state.x, top: state.y, originX: 'left', originY: 'top' });
   const [confirming, setConfirming] = useState(false);
-  const { mutate: deleteMovie, isPending: isDeleting } = useDeleteMovie();
+  const { mutate: deleteMovie, isPending: isDeleting, isError: deleteFailed, reset: resetDelete } = useDeleteMovie();
 
   const isUpcoming = movie.category === '預售新片';
   const actresses = listActressNames(movie.actress).slice(0, 3);
@@ -82,6 +82,17 @@ function MenuPanel({ state, onClose, favorited, onToggleFavorite, onDeleteUpcomi
     });
     el.querySelector<HTMLElement>('[role="menuitem"]')?.focus({ preventScroll: true });
   }, [state.x, state.y, sheet]);
+
+  // 關閉後把焦點還給叫出選單的卡片（鍵盤使用者不會掉回頁首）
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    return () => {
+      // 使用者已點到別處（如搜尋框）就不搶焦點；只有焦點落回 body 或還在選單內時才歸還
+      const active = document.activeElement;
+      const focusLost = !active || active === document.body || panelRef.current?.contains(active);
+      if (focusLost && opener?.isConnected) opener.focus({ preventScroll: true });
+    };
+  }, []);
 
   // 點外面、Esc、捲動、縮放視窗都關閉；方向鍵在項目間移動
   useEffect(() => {
@@ -119,7 +130,10 @@ function MenuPanel({ state, onClose, favorited, onToggleFavorite, onDeleteUpcomi
   }, [confirming]);
 
   const handleDelete = () => {
-    if (!confirming) return setConfirming(true);
+    if (!confirming) {
+      resetDelete();
+      return setConfirming(true);
+    }
     if (isUpcoming && onDeleteUpcoming) {
       onDeleteUpcoming(movie.code);
       return onClose();
@@ -235,7 +249,7 @@ function MenuPanel({ state, onClose, favorited, onToggleFavorite, onDeleteUpcomi
       >
         {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
         <span className="flex-1">
-          {isDeleting ? '刪除中…' : confirming ? '再按一次確認刪除' : isUpcoming ? '刪除預售片' : '刪除影片'}
+          {isDeleting ? '刪除中…' : confirming ? '再按一次確認刪除' : deleteFailed ? '刪除失敗，請重試' : isUpcoming ? '刪除預售片' : '刪除影片'}
         </span>
       </button>
     </motion.div>

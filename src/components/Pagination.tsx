@@ -34,7 +34,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
   const range = getPageRange(currentPage, totalPages);
 
   const arrowBase =
-    'flex h-11 min-w-11 items-center justify-center rounded-xl border text-sm font-semibold transition-all duration-200 active:scale-95';
+    'flex h-11 min-w-11 items-center justify-center rounded-xl border text-sm font-semibold tabular-nums transition-[background-color,border-color,color,transform] duration-200 active:scale-[0.97]';
   const arrowEnabled =
     'border-white/10 bg-white/5 text-white/70 hover:border-white/20 hover:bg-white/10 hover:text-white';
   const arrowDisabled = 'border-white/5 bg-white/[0.02] text-white/20 cursor-not-allowed';

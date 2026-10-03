@@ -98,3 +98,12 @@ test('佔位片補資料：原連結已下架（404 標題）時由其他片源�
     { title: 'DASS-011 標題', url: 'https://missav.ai/dass-011', source: 'MissAV' }
   );
 });
+
+test('錯誤頁判斷只認已知錯誤片語，數字開頭或含 Not Found 字樣的正常片名不誤判', () => {
+  for (const title of ['435MFC-123 素人', '529STCV-001', '480分 ベスト', '500 人斬り', '500 Best Hits', 'MISSION NOT FOUND 特典']) {
+    assert.equal(isUnusableDetailPage(200, title), false, title);
+  }
+  for (const title of ['404 Not Found', '403 Forbidden', '502 Bad Gateway', 'Page Not Found', 'Not Found', '404']) {
+    assert.equal(isUnusableDetailPage(200, title), true, title);
+  }
+});

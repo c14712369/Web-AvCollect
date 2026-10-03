@@ -12,7 +12,7 @@ import { usePreferredActresses } from '@/hooks/usePreferredActresses';
 import { useAddMovie, useMovies } from '@/hooks/useMovies';
 import { useUpcomingMovies, useDeleteUpcomingMovie } from '@/hooks/useUpcomingMovies';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { ACTRESS_SPLIT_REGEX, countActressAppearances, matchActress } from '@/lib/actress-matcher';
+import { countActressAppearances, listActressNames, matchActress } from '@/lib/actress-matcher';
 import { sortMovies, type SortDirection } from '@/lib/movie-sort';
 import { toIsoTimestamp } from '@/lib/client-state';
 import { shouldFetchUpcoming, UPCOMING_PREFETCH_DELAY_MS } from '@/lib/interaction-performance';
@@ -197,11 +197,8 @@ export function HomeView({ initialMovies }: HomeViewProps) {
       } else if (showFavActressOnly) {
         matchesFavActress =
           (!!m.actress &&
-            m.actress
-              .split(ACTRESS_SPLIT_REGEX)
-              .map((a) => a.toLowerCase().trim())
-              .filter(Boolean)
-              .some((a) => favActressSet.has(a))) ||
+            listActressNames(m.actress)
+              .some((a) => favActressSet.has(a.toLowerCase()))) ||
           preferredActresses.some((name) => matchActress(name, m.title));
       }
 
@@ -314,7 +311,11 @@ export function HomeView({ initialMovies }: HomeViewProps) {
         result={addResult}
         onDismiss={dismissAddResult}
         onShow={(code) => switchView(() => {
+          // 清掉所有篩選，確保剛加入的片一定看得到
           setShowUpcomingOnly(false);
+          setShowFavoritesOnly(false);
+          setShowFavActressOnly(false);
+          setActiveFavActress('全部');
           setSearchQuery(code);
         })}
       />

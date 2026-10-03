@@ -189,7 +189,7 @@ export async function POST(req: Request) {
       category: '使用者新增',
       tags,
       actress,
-    });
+    }, { metadataUnavailable });
 
     return NextResponse.json({ success: true, movie: result.movie, outcome: result.outcome });
   } catch (error) {
