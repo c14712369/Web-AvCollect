@@ -43,7 +43,10 @@ export function AddResultToast({ result, onDismiss, onShow }: Props) {
 
   // 掛到 body：外層有 transform 的容器會讓 fixed 改以它為定位基準，提示就跑出畫面外
   return createPortal(
-    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[110] flex justify-center px-4">
+    <div
+      className="pointer-events-none fixed inset-x-0 z-[110] flex justify-center px-4"
+      style={{ bottom: 'max(1.5rem, calc(env(safe-area-inset-bottom) + 0.75rem))' }}
+    >
       <AnimatePresence>
         {result && (
           <motion.div

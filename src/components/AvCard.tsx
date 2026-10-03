@@ -14,7 +14,7 @@ interface AvCardProps {
   /** 左鍵/Enter：直接在新分頁開啟。 */
   onOpen: (movie: Movie) => void;
   /** 右鍵 / 觸控長按 / 鍵盤選單鍵：叫出操作選單。 */
-  onOpenMenu: (movie: Movie, x: number, y: number) => void;
+  onOpenMenu: (movie: Movie, x: number, y: number, touch: boolean) => void;
   onDeleteUpcoming?: (code: string) => void;
 }
 
@@ -47,7 +47,7 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
     pressTimer.current = window.setTimeout(() => {
       suppressClick.current = true;
       navigator.vibrate?.(8);
-      onOpenMenu(movie, clientX, clientY);
+      onOpenMenu(movie, clientX, clientY, true);
       cancelPress();
     }, LONG_PRESS_MS);
   };
@@ -69,9 +69,9 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
     // 鍵盤選單鍵 / Shift+F10 沒有座標 → 錨在卡片左上
     if (e.clientX === 0 && e.clientY === 0) {
       const rect = e.currentTarget.getBoundingClientRect();
-      return onOpenMenu(movie, rect.left + 16, rect.top + 16);
+      return onOpenMenu(movie, rect.left + 16, rect.top + 16, false);
     }
-    onOpenMenu(movie, e.clientX, e.clientY);
+    onOpenMenu(movie, e.clientX, e.clientY, isTouch);
   };
 
   const handleClick = () => {

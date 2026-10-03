@@ -40,7 +40,10 @@ export function MovieGrid({
   const previousResetKey = useRef(resetKey);
   const [menu, setMenu] = useState<CardMenuState | null>(null);
   const closeMenu = useCallback(() => setMenu(null), []);
-  const openMenu = useCallback((movie: Movie, x: number, y: number) => setMenu({ movie, x, y }), []);
+  const openMenu = useCallback(
+    (movie: Movie, x: number, y: number, touch: boolean) => setMenu({ movie, x, y, touch }),
+    []
+  );
 
   const setUrlPage = useCallback((nextPage: number, mode: 'push' | 'replace') => {
     const params = new URLSearchParams(searchParams.toString());

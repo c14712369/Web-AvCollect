@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { countActressAppearances, matchActress } from './actress-matcher';
+import { listActressNames } from './actress-matcher';
 
 // 收藏限定的女優下拉選項來自收藏片的 actress 欄位切割，
 // 因此「同字串自比對」必須恆為 true，否則篩選必定零結果。
@@ -61,4 +62,11 @@ test('計數：多人欄位切割後分別計數，空值忽略', () => {
     countActressAppearances(['明里紬 高橋聖子', null, undefined, '', '明里紬']),
     { '明里紬': 2, '高橋聖子': 1 }
   );
+});
+
+test('listActressNames：括號內的別名/讀音視為同一人，不拆成另一位女優', () => {
+  assert.deepEqual(listActressNames('松本一香 (松本いちか)'), ['松本一香']);
+  assert.deepEqual(listActressNames('小野六花、三田真鈴'), ['小野六花', '三田真鈴']);
+  assert.deepEqual(listActressNames('天然美月（天然みづき） 伊藤舞雪'), ['天然美月', '伊藤舞雪']);
+  assert.deepEqual(listActressNames(null), []);
 });

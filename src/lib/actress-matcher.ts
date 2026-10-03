@@ -175,3 +175,14 @@ export function matchActress(prefName: string, targetText: string): boolean {
     return regex.test(targetLower);
   });
 }
+
+/** 結構化女優欄位 → 女優名清單；括號內的別名/讀音（如「松本一香 (松本いちか)」）視為同一人。 */
+export function listActressNames(actress: string | null | undefined): string[] {
+  if (!actress) return [];
+  const names = actress
+    .replace(/\s*[（(][^）)]*[）)]/g, '')
+    .split(ACTRESS_SPLIT_REGEX)
+    .map((a) => a.trim())
+    .filter(Boolean);
+  return Array.from(new Set(names));
+}

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ExternalLink, Heart, Loader2, Trash2, User } from 'lucide-react';
 import type { Movie } from '@/types/av';
-import { ACTRESS_SPLIT_REGEX } from '@/lib/actress-matcher';
+import { listActressNames } from '@/lib/actress-matcher';
 import { openMovieExternally } from '@/lib/open-movie';
 import { useDeleteMovie } from '@/hooks/useMovies';
 
@@ -14,6 +14,8 @@ export interface CardMenuState {
   movie: Movie;
   x: number;
   y: number;
+  /** 觸控長按叫出 → 底部面板；滑鼠右鍵 → 游標旁浮出選單。 */
+  touch?: boolean;
 }
 
 interface CardContextMenuProps {
@@ -61,16 +63,14 @@ function MenuPanel({ state, onClose, favorited, onToggleFavorite, onDeleteUpcomi
   const { mutate: deleteMovie, isPending: isDeleting } = useDeleteMovie();
 
   const isUpcoming = movie.category === '預售新片';
-  const actresses = (movie.actress ?? '')
-    .split(ACTRESS_SPLIT_REGEX)
-    .map((a) => a.trim())
-    .filter(Boolean)
-    .slice(0, 3);
+  const actresses = listActressNames(movie.actress).slice(0, 3);
+  const sheet = !!state.touch;
 
   // 依實際尺寸夾在視窗內；靠右/靠下時改往左/上展開，縮放原點跟著游標
   useLayoutEffect(() => {
     const el = panelRef.current;
     if (!el) return;
+    if (sheet) return;
     const { offsetWidth: w, offsetHeight: h } = el;
     const flipX = state.x + w + EDGE > window.innerWidth;
     const flipY = state.y + h + EDGE > window.innerHeight;
@@ -81,7 +81,7 @@ function MenuPanel({ state, onClose, favorited, onToggleFavorite, onDeleteUpcomi
       originY: flipY ? 'bottom' : 'top',
     });
     el.querySelector<HTMLElement>('[role="menuitem"]')?.focus({ preventScroll: true });
-  }, [state.x, state.y]);
+  }, [state.x, state.y, sheet]);
 
   // 點外面、Esc、捲動、縮放視窗都關閉；方向鍵在項目間移動
   useEffect(() => {
@@ -127,19 +127,54 @@ function MenuPanel({ state, onClose, favorited, onToggleFavorite, onDeleteUpcomi
     deleteMovie(movie.code, { onSuccess: onClose });
   };
 
+  const panelMotion = sheet
+    ? {
+        initial: reduceMotion ? { opacity: 0 } : { transform: 'translateY(100%)' },
+        animate: reduceMotion ? { opacity: 1 } : { transform: 'translateY(0%)' },
+        exit: reduceMotion
+          ? { opacity: 0, transition: { duration: 0.15 } }
+          : { transform: 'translateY(100%)', transition: { duration: 0.2, ease: [0.32, 0.72, 0, 1] } },
+        transition: { duration: 0.32, ease: [0.32, 0.72, 0, 1] },
+      }
+    : {
+        initial: reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 },
+        animate: { opacity: 1, scale: 1 },
+        exit: { opacity: 0, scale: reduceMotion ? 1 : 0.98, transition: { duration: 0.1 } },
+        transition: { duration: 0.14, ease: [0.23, 1, 0.32, 1] },
+      };
+
   return (
+    <>
+    {sheet && (
+      <motion.div
+        aria-hidden
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0, transition: { duration: 0.2 } }}
+        transition={{ duration: 0.25 }}
+        className="fixed inset-0 z-[119] bg-black/55 backdrop-blur-[2px]"
+      />
+    )}
     <motion.div
       ref={panelRef}
       role="menu"
       aria-label={`${movie.code} 操作`}
-      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: reduceMotion ? 1 : 0.98, transition: { duration: 0.1 } }}
-      transition={{ duration: 0.14, ease: [0.23, 1, 0.32, 1] }}
-      style={{ left: pos.left, top: pos.top, width: MENU_WIDTH, transformOrigin: `${pos.originY} ${pos.originX}` }}
-      className="fixed z-[120] overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/90 p-1.5 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.75),0_0_0_1px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+      {...panelMotion}
+      style={
+        sheet
+          ? { paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }
+          : { left: pos.left, top: pos.top, width: MENU_WIDTH, transformOrigin: `${pos.originY} ${pos.originX}` }
+      }
+      data-sheet={sheet || undefined}
+      className={`group/menu fixed z-[120] overflow-hidden border border-white/10 bg-zinc-900/95 backdrop-blur-xl ${
+        sheet
+          ? 'inset-x-0 bottom-0 rounded-t-3xl border-b-0 px-3 pt-2 shadow-[0_-20px_60px_-12px_rgba(0,0,0,0.8)]'
+          : 'rounded-2xl p-1.5 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.75),0_0_0_1px_rgba(0,0,0,0.4)]'
+      }`}
       onContextMenu={(e) => e.preventDefault()}
     >
+      {sheet && <div className="mx-auto mb-3 mt-1 h-1 w-10 rounded-full bg-white/20" aria-hidden />}
+
       {/* 標頭：番號 + 標題，讓使用者確認正在操作哪一部 */}
       <div className="px-2.5 pb-2 pt-1.5">
         <span className="inline-flex rounded-md border border-indigo-400/25 bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs font-bold tracking-tight text-indigo-200">
@@ -155,7 +190,6 @@ function MenuPanel({ state, onClose, favorited, onToggleFavorite, onDeleteUpcomi
       <MenuItem
         icon={<ExternalLink className="h-4 w-4" />}
         label={isUpcoming ? '前往官網' : '在新分頁開啟'}
-        hint="點擊卡片"
         onClick={() => {
           openMovieExternally(movie);
           onClose();
@@ -193,7 +227,7 @@ function MenuPanel({ state, onClose, favorited, onToggleFavorite, onDeleteUpcomi
         onClick={handleDelete}
         disabled={isDeleting}
         aria-live="polite"
-        className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-medium outline-none transition-[background-color,color,transform] duration-150 active:scale-[0.98] disabled:opacity-60 ${
+        className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-medium outline-none group-data-[sheet]/menu:gap-3.5 group-data-[sheet]/menu:px-3 group-data-[sheet]/menu:py-3.5 group-data-[sheet]/menu:text-base transition-[background-color,color,transform] duration-150 active:scale-[0.98] disabled:opacity-60 ${
           confirming
             ? 'bg-rose-500 text-white shadow-[0_6px_20px_-6px_rgba(244,63,94,0.7)] focus-visible:bg-rose-500'
             : 'text-rose-400 hover:bg-rose-500/12 focus-visible:bg-rose-500/12'
@@ -205,20 +239,20 @@ function MenuPanel({ state, onClose, favorited, onToggleFavorite, onDeleteUpcomi
         </span>
       </button>
     </motion.div>
+    </>
   );
 }
 
-function MenuItem({ icon, label, hint, onClick }: { icon: React.ReactNode; label: string; hint?: string; onClick: () => void }) {
+function MenuItem({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
     <button
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-medium text-white/80 outline-none transition-[background-color,color,transform] duration-150 hover:bg-white/[0.07] hover:text-white focus-visible:bg-white/[0.07] focus-visible:text-white active:scale-[0.98]"
+      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-medium text-white/80 group-data-[sheet]/menu:gap-3.5 group-data-[sheet]/menu:px-3 group-data-[sheet]/menu:py-3.5 group-data-[sheet]/menu:text-base outline-none transition-[background-color,color,transform] duration-150 hover:bg-white/[0.07] hover:text-white focus-visible:bg-white/[0.07] focus-visible:text-white active:scale-[0.98]"
     >
       <span className="text-white/45">{icon}</span>
       <span className="flex-1 truncate">{label}</span>
-      {hint && <span className="text-xs text-white/25">{hint}</span>}
     </button>
   );
 }
