@@ -1,19 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Info } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { Movie } from '@/types/av';
 import { pageFromSearchParam } from '@/lib/client-state';
+import { openMovieExternally } from '@/lib/open-movie';
 import { AvCard } from './AvCard';
+import { CardContextMenu, type CardMenuState } from './CardContextMenu';
 import { Pagination } from './Pagination';
 
 interface MovieGridProps {
   movies: Movie[];
   favorites: string[];
   onToggleFavorite: (code: string) => void;
-  onSelectMovie: (movie: Movie) => void;
   /** 一頁顯示幾部，預設 24。 */
   pageSize?: number;
   /** 此值變動時自動跳回第一頁（用來在篩選/搜尋改變時 reset）。 */
@@ -27,7 +28,6 @@ export function MovieGrid({
   movies,
   favorites,
   onToggleFavorite,
-  onSelectMovie,
   pageSize = 24,
   resetKey,
   onDeleteUpcoming,
@@ -38,6 +38,9 @@ export function MovieGrid({
   const searchParams = useSearchParams();
   const page = pageFromSearchParam(searchParams.get('page'));
   const previousResetKey = useRef(resetKey);
+  const [menu, setMenu] = useState<CardMenuState | null>(null);
+  const closeMenu = useCallback(() => setMenu(null), []);
+  const openMenu = useCallback((movie: Movie, x: number, y: number) => setMenu({ movie, x, y }), []);
 
   const setUrlPage = useCallback((nextPage: number, mode: 'push' | 'replace') => {
     const params = new URLSearchParams(searchParams.toString());
@@ -103,12 +106,21 @@ export function MovieGrid({
               movie={movie}
               favorited={favorites.includes(movie.code)}
               onToggleFavorite={onToggleFavorite}
-              onSelect={onSelectMovie}
+              onOpen={openMovieExternally}
+              onOpenMenu={openMenu}
               onDeleteUpcoming={onDeleteUpcoming}
             />
           </div>
         ))}
       </div>
+
+      <CardContextMenu
+        state={menu}
+        onClose={closeMenu}
+        favorited={menu ? favorites.includes(menu.movie.code) : false}
+        onToggleFavorite={onToggleFavorite}
+        onDeleteUpcoming={onDeleteUpcoming}
+      />
 
       <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={goTo} />
     </div>

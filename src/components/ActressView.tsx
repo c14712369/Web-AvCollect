@@ -1,11 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 import { ArrowLeft, User } from 'lucide-react';
 import type { Movie } from '@/types/av';
 import { MovieGrid } from './MovieGrid';
-import { MovieDetailModal } from './MovieDetailModal';
 import { useFavorites } from '@/hooks/useFavorites';
 
 interface ActressViewProps {
@@ -15,7 +13,6 @@ interface ActressViewProps {
 
 export function ActressView({ name, works }: ActressViewProps) {
   const { favorites, toggleFavorite } = useFavorites();
-  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
   const sourceBreakdown = works.reduce<Record<string, number>>((acc, m) => {
     acc[m.source] = (acc[m.source] ?? 0) + 1;
@@ -70,11 +67,8 @@ export function ActressView({ name, works }: ActressViewProps) {
           movies={works}
           favorites={favorites}
           onToggleFavorite={toggleFavorite}
-          onSelectMovie={setSelectedMovie}
         />
       </div>
-
-      <MovieDetailModal movie={selectedMovie} onClose={() => setSelectedMovie(null)} />
 
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
         <div className="absolute top-0 -left-1/4 h-[500px] w-[500px] rounded-full bg-rose-500/5 blur-[120px]" />

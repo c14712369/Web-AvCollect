@@ -11,14 +11,75 @@ interface AvCardProps {
   movie: Movie;
   favorited: boolean;
   onToggleFavorite: (code: string) => void;
-  onSelect: (movie: Movie) => void;
+  /** 左鍵/Enter：直接在新分頁開啟。 */
+  onOpen: (movie: Movie) => void;
+  /** 右鍵 / 觸控長按 / 鍵盤選單鍵：叫出操作選單。 */
+  onOpenMenu: (movie: Movie, x: number, y: number) => void;
   onDeleteUpcoming?: (code: string) => void;
 }
 
-export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavorite, onSelect, onDeleteUpcoming }) => {
+/** 觸控長按多久叫出選單（iOS Safari 不會觸發 contextmenu，需自己判斷）。 */
+const LONG_PRESS_MS = 480;
+const LONG_PRESS_TOLERANCE = 10;
+
+export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavorite, onOpen, onOpenMenu, onDeleteUpcoming }) => {
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onToggleFavorite(movie.code);
+  };
+
+  const pressTimer = React.useRef<number | null>(null);
+  const pressStart = React.useRef<{ x: number; y: number } | null>(null);
+  // 長按叫出選單後，放開手指產生的 click 不能再開分頁
+  const suppressClick = React.useRef(false);
+
+  const cancelPress = () => {
+    if (pressTimer.current) window.clearTimeout(pressTimer.current);
+    pressTimer.current = null;
+    pressStart.current = null;
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    suppressClick.current = false;
+    if (e.pointerType !== 'touch') return;
+    pressStart.current = { x: e.clientX, y: e.clientY };
+    const { clientX, clientY } = e;
+    pressTimer.current = window.setTimeout(() => {
+      suppressClick.current = true;
+      navigator.vibrate?.(8);
+      onOpenMenu(movie, clientX, clientY);
+      cancelPress();
+    }, LONG_PRESS_MS);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    const start = pressStart.current;
+    if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > LONG_PRESS_TOLERANCE) cancelPress();
+  };
+
+  React.useEffect(() => cancelPress, []);
+
+  const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    // Android 長按會同時觸發計時器與原生 contextmenu，計時器已開過就不重開
+    if (suppressClick.current) return;
+    const isTouch = pressStart.current !== null;
+    cancelPress();
+    suppressClick.current = isTouch;
+    // 鍵盤選單鍵 / Shift+F10 沒有座標 → 錨在卡片左上
+    if (e.clientX === 0 && e.clientY === 0) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      return onOpenMenu(movie, rect.left + 16, rect.top + 16);
+    }
+    onOpenMenu(movie, e.clientX, e.clientY);
+  };
+
+  const handleClick = () => {
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      return;
+    }
+    onOpen(movie);
   };
 
   const initialUrl = upgradeImageUrl(movie.imageUrl, movie.source);
@@ -37,8 +98,22 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
 
   return (
     <div
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] cursor-pointer"
-      onClick={() => onSelect(movie)}
+      role="link"
+      tabIndex={0}
+      aria-label={`${movie.code} ${movie.title}（右鍵或長按開啟選單）`}
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] active:scale-[0.99] cursor-pointer select-none [-webkit-touch-callout:none] outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+      onClick={handleClick}
+      onAuxClick={(e) => {
+        if (e.button === 1) onOpen(movie);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && e.target === e.currentTarget) onOpen(movie);
+      }}
+      onContextMenu={handleContextMenu}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={cancelPress}
+      onPointerCancel={cancelPress}
     >
       {/* Image Container - 16:9 寬幅封面（預售片為 3:4 直式）；用 cover 填滿整個卡片，超出範圍裁切不留黑邊 */}
       <div className={`relative w-full overflow-hidden bg-zinc-900 ${movie.category === '預售新片' ? 'aspect-[3/4]' : 'aspect-[16/9]'}`}>
@@ -59,6 +134,7 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
             fill
             unoptimized
             referrerPolicy="no-referrer"
+            draggable={false}
             onError={handleImgError}
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"

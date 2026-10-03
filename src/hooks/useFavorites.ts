@@ -64,11 +64,17 @@ export const useFavorites = () => {
     [mutation, queryClient]
   );
 
+  /** 單筆加入收藏（已收藏則不動）；新增片子時用。 */
+  const addFavorite = useCallback(
+    (code: string) => mutation.mutate({ op: 'add', code }),
+    [mutation]
+  );
+
   /** 整份覆蓋：僅供匯入使用，會清掉現有收藏。 */
   const replaceFavorites = useCallback(
     (codes: string[]) => mutation.mutate({ op: 'replace', codes }),
     [mutation]
   );
 
-  return { favorites, toggleFavorite, isFavorite, replaceFavorites };
+  return { favorites, toggleFavorite, isFavorite, addFavorite, replaceFavorites };
 };

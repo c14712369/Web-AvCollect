@@ -20,7 +20,7 @@ import {
   type MovieFeatures,
 } from '@/lib/taste/core';
 import type { Movie } from '@/types/av';
-import { shouldUpgradeSource } from '@/lib/manual-movie';
+import { getPlaceholderRepairPatch, shouldUpgradeSource } from '@/lib/manual-movie';
 
 /** 解析 DB tags 欄（JSON string[]），壞資料/空值回空陣列。 */
 const parseTags = (raw: string | null): string[] => {
@@ -287,18 +287,25 @@ export const upsertMovieBySourcePriority = async (data: MovieInsert): Promise<Up
   }
 
   const current = existing[0];
-  if (!shouldUpgradeSource(current.source, data.source)) {
+  const upgrade = shouldUpgradeSource(current.source, data.source);
+  // 既有資料是佔位片（標題=番號/錯誤頁、封面空白或死鏈）→ 這次抓到什麼就補什麼，即使同片源
+  const patch = upgrade ? {} : getPlaceholderRepairPatch(current, data);
+  if (!upgrade && !patch) {
     return { movie: enrich(current, cfg.preferredActresses), outcome: 'existing' };
   }
 
-  await db.update(movies).set({
-    url: data.url,
-    source: data.source,
-    ...(data.imageUrl ? { imageUrl: data.imageUrl } : {}),
-    ...(data.title && data.title !== data.code ? { title: data.title } : {}),
-    ...(data.tags ? { tags: data.tags } : {}),
-    ...(data.actress ? { actress: data.actress } : {}),
-  }).where(eq(movies.code, data.code));
+  await db.update(movies).set(
+    upgrade
+      ? {
+          url: data.url,
+          source: data.source,
+          ...(data.imageUrl ? { imageUrl: data.imageUrl } : {}),
+          ...(data.title && data.title !== data.code ? { title: data.title } : {}),
+          ...(data.tags ? { tags: data.tags } : {}),
+          ...(data.actress ? { actress: data.actress } : {}),
+        }
+      : patch!
+  ).where(eq(movies.code, data.code));
   const updated = await db.select().from(movies).where(eq(movies.code, data.code)).limit(1);
   return { movie: enrich(updated[0], cfg.preferredActresses), outcome: 'upgraded' };
 };

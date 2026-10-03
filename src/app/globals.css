@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tailwind v4 alpha 的自動偵測不會掃到尚未 git add 的新檔，明確指定掃描來源 */
+@source "../**/*.{ts,tsx}";
+
 /* 讓 dark: 變體跟著 .dark class 走，而非作業系統偏好（本 App 固定深色） */
 @custom-variant dark (&:where(.dark, .dark *));
 

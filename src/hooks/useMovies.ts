@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Movie } from '@/types/av';
+import { mergeAddedMovie } from '@/lib/manual-movie';
 
 const QUERY_KEY = ['movies'] as const;
 
@@ -19,7 +20,9 @@ const deleteMovieApi = async (code: string): Promise<void> => {
   if (!res.ok || !json.success) throw new Error(json.error ?? 'Failed to delete');
 };
 
-const addMovie = async (url: string): Promise<Movie> => {
+export type AddMovieOutcome = 'inserted' | 'upgraded' | 'existing';
+
+const addMovie = async (url: string): Promise<{ movie: Movie; outcome: AddMovieOutcome }> => {
   const res = await fetch('/api/movies', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -27,7 +30,7 @@ const addMovie = async (url: string): Promise<Movie> => {
   });
   const json = await res.json();
   if (!res.ok || !json.success) throw new Error(json.error ?? 'Failed');
-  return json.movie;
+  return { movie: json.movie, outcome: json.outcome ?? 'inserted' };
 };
 
 export const useMovies = () => {
@@ -38,10 +41,9 @@ export const useAddMovie = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: addMovie,
-    onSuccess: (movie) => {
-      queryClient.setQueryData<Movie[]>(QUERY_KEY, (prev) =>
-        prev ? [movie, ...prev] : [movie]
-      );
+    onSuccess: ({ movie }) => {
+      // 重新加入既有片（補資料/升級片源）時就地取代，避免出現重複卡片
+      queryClient.setQueryData<Movie[]>(QUERY_KEY, (prev) => mergeAddedMovie(prev, movie));
     },
   });
 };

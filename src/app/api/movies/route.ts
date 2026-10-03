@@ -5,7 +5,7 @@ import * as cheerio from 'cheerio';
 import { upsertMovieBySourcePriority, listMovies, deleteMovie } from '@/lib/db/queries';
 import { addMovieSchema } from '@/lib/validators';
 import { extractTagsBySource, extractActressBySource } from '@/lib/scrape/detail-tags';
-import { getManualMovieIdentity } from '@/lib/manual-movie';
+import { getFallbackCoverUrl, getManualMovieIdentity, isUnusableDetailPage } from '@/lib/manual-movie';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,13 +26,8 @@ function parseTitle($: cheerio.CheerioAPI): string {
   );
 }
 
-/** 是否被 Cloudflare / 反爬蟲攔截（403 或挑戰頁標題）。 */
-function looksBlocked(status: number, title: string): boolean {
-  return (
-    status === 403 ||
-    /Attention Required|Just a moment|you have been blocked|Enable JavaScript and cookies/i.test(title)
-  );
-}
+/** 詳情頁不可用：被 Cloudflare 擋（403/挑戰頁）或已下架（404）。 */
+const looksBlocked = isUnusableDetailPage;
 
 /** 直連目標頁。 */
 async function fetchDirect(url: string): Promise<{ html: string; status: number }> {
@@ -143,7 +138,7 @@ export async function POST(req: Request) {
       ? identity.code!
       : title.replace(/\s*[|｜]\s*(?:Javrate|Jable|MissAV|SupJav)\s*$/i, '').trim();
 
-    let imageUrl = $('meta[property="og:image"]').attr('content') || '';
+    let imageUrl = metadataUnavailable ? '' : $('meta[property="og:image"]').attr('content') || '';
 
     let code = 'UNKNOWN';
     // 改良後的 Regex: 支援多個連字號 (如 FC2-PPV-xxxxxx) 且 URL 匹配也支援不分大小寫
@@ -166,14 +161,15 @@ export async function POST(req: Request) {
         imageUrl = $('.video-img-box img').attr('src') || '';
       } else if (source === 'MissAV') {
         imageUrl = $('video').attr('poster') || '';
-        // 如果還是沒抓到 (可能是被阻擋)，嘗試猜測 MissAV 的圖片路徑
-        if (!imageUrl && code !== 'UNKNOWN') {
-          imageUrl = `https://sixyik.com/${code.toLowerCase()}/cover-n.jpg`;
-        }
       } else if (source === 'SupJav') {
         // SupJav 無 og:image；詳情頁主圖在 .post-meta img.img（全尺寸）
         imageUrl = $('.post-meta img.img').attr('src') || '';
       }
+    }
+
+    // 詳情頁被擋（Vercel 無 curl、Jina 機房 IP 也被 CF 擋）→ 封面改走不在 CF 後面的 fourhoi CDN
+    if (!imageUrl && (source === 'MissAV' || source === 'Jable')) {
+      imageUrl = getFallbackCoverUrl(url, code);
     }
 
     // 詳情頁順手抽真實內容標籤（頁面已抓，幾乎零成本）

@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { Movie } from '@/types/av';
 import { Header, type SortOption } from './Header';
 import { MovieGrid } from './MovieGrid';
-import { MovieDetailModal } from './MovieDetailModal';
 import { AddMovieDialog } from './AddMovieDialog';
+import { AddResultToast, type AddResult } from './AddResultToast';
 import { useFavorites } from '@/hooks/useFavorites';
 import { usePreferredActresses } from '@/hooks/usePreferredActresses';
 import { useAddMovie, useMovies } from '@/hooks/useMovies';
@@ -24,7 +24,7 @@ interface HomeViewProps {
 export function HomeView({ initialMovies }: HomeViewProps) {
   const { data: movies = initialMovies } = useMovies();
   const addMovie = useAddMovie();
-  const { favorites, toggleFavorite, isFavorite } = useFavorites();
+  const { favorites, toggleFavorite, isFavorite, addFavorite } = useFavorites();
   const preferredActresses = usePreferredActresses();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,8 +36,9 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   const [upcomingPrefetchReady, setUpcomingPrefetchReady] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('added');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [addResult, setAddResult] = useState<AddResult | null>(null);
+  const dismissAddResult = useCallback(() => setAddResult(null), []);
   const [isSwitchingView, startViewTransition] = useTransition();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -239,18 +240,11 @@ export function HomeView({ initialMovies }: HomeViewProps) {
     setSortDirection('desc');
   });
 
-  const handleSelectMovie = (movie: Movie) => {
-    setSelectedMovie(movie);
-    // 記錄已瀏覽/點進去過的影片（避免兩週後被視為未讀清理）
-    fetch('/api/movies/viewed', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: movie.code }),
-    }).catch((err) => console.warn('Record view failed:', err));
-  };
-
+  // 「新增收藏」= 進片庫 + 加入收藏；片庫已有的片也照樣收藏，並用提示告知結果
   const handleSubmitAdd = async (url: string) => {
-    await addMovie.mutateAsync(url);
+    const { movie, outcome } = await addMovie.mutateAsync(url);
+    addFavorite(movie.code);
+    setAddResult({ movie, outcome, id: Date.now() });
   };
  
   return (
@@ -305,22 +299,24 @@ export function HomeView({ initialMovies }: HomeViewProps) {
           movies={filtered}
           favorites={favorites}
           onToggleFavorite={toggleFavorite}
-          onSelectMovie={handleSelectMovie}
           resetKey={pageResetKey}
           onPageChange={(navigate) => switchView(navigate)}
           onDeleteUpcoming={(code) => deleteUpcoming.mutate(code)}
         />
       </div>
-      <MovieDetailModal
-        movie={selectedMovie}
-        onClose={() => setSelectedMovie(null)}
-        onDeleteUpcoming={(code) => deleteUpcoming.mutate(code)}
-      />
       <AddMovieDialog
         open={addOpen}
         onClose={() => setAddOpen(false)}
         onSubmit={handleSubmitAdd}
         isSubmitting={addMovie.isPending}
+      />
+      <AddResultToast
+        result={addResult}
+        onDismiss={dismissAddResult}
+        onShow={(code) => switchView(() => {
+          setShowUpcomingOnly(false);
+          setSearchQuery(code);
+        })}
       />
       {(isSwitchingView || isUpcomingLoadPending || (showUpcomingOnly && upcomingLoading)) && (
         <div
