@@ -4,8 +4,12 @@ import { promisify } from 'node:util';
 import * as cheerio from 'cheerio';
 import { upsertMovieBySourcePriority, listMovies, deleteMovie } from '@/lib/db/queries';
 import { addMovieSchema } from '@/lib/validators';
+import { db } from '@/lib/db/client';
+import { movies } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import { extractTagsBySource, extractActressBySource } from '@/lib/scrape/detail-tags';
 import { getFallbackCoverUrl, getManualMovieIdentity, isUnusableDetailPage } from '@/lib/manual-movie';
+import { enrichPersistedMovie } from '@/lib/metadata-enrichment';
 
 export const dynamic = 'force-dynamic';
 
@@ -191,7 +195,20 @@ export async function POST(req: Request) {
       actress,
     }, { metadataUnavailable });
 
-    return NextResponse.json({ success: true, movie: result.movie, outcome: result.outcome });
+    const enrichment = await enrichPersistedMovie(result.movie, { source, url, metadataUnavailable }, {
+      loadMetadata: async () => {
+        const [persisted] = await db.select({ tags: movies.tags, actress: movies.actress }).from(movies)
+          .where(eq(movies.code, result.movie.code)).limit(1);
+        return { tags: persisted?.tags ?? null, actress: persisted?.actress ?? null };
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      movie: result.movie,
+      outcome: result.outcome,
+      enrichment,
+    });
   } catch (error) {
     console.error('[POST /api/movies]', error);
     return NextResponse.json(
