@@ -7,7 +7,7 @@
   "host_permissions": [
     "http://localhost:3000/*",
     "http://127.0.0.1:3000/*",
-    "https://*/*"
+    "https://avcollect.vercel.app/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -17,7 +17,7 @@
       "matches": [
         "http://localhost:3000/*",
         "http://127.0.0.1:3000/*",
-        "https://*/*"
+        "https://avcollect.vercel.app/*"
       ],
       "js": ["content.js"],
       "run_at": "document_start"
