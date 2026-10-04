@@ -9,7 +9,6 @@
 - **框架**：Next.js 15.5 (App Router) + React 19
 - **資料庫**：Turso (libSQL/SQLite) + Drizzle ORM
 - **狀態**：TanStack Query v5（含 optimistic updates）
-- **虛擬化**：@tanstack/react-virtual
 - **樣式**：Tailwind CSS v4 (CSS-first `@theme`)
 - **動畫**：Framer Motion v11
 - **驗證**：Zod + t3-env
@@ -39,6 +38,17 @@ npm run dev
 
 開啟 [http://localhost:3000](http://localhost:3000)，輸入 `APP_SECRET` 密碼登入。
 
+## 背景開啟影片
+
+點擊影片卡片會在新分頁開啟原站。安裝 `extension/` 內的 Chrome / Edge 擴充功能後，新分頁會在背景建立，AvCollect 會保持在目前分頁且維持焦點；每次點擊只會建立一個分頁。
+
+1. 開啟 `chrome://extensions` 或 `edge://extensions`。
+2. 啟用「開發人員模式」，選擇「載入未封裝項目」。
+3. 選取本專案的 `extension` 資料夾。
+4. 回到 AvCollect 並重新整理頁面。
+
+修改或更新 `extension/` 內容後，請在擴充功能管理頁按一次「重新載入」，再重新整理 AvCollect。完整安裝方式與 Tampermonkey 替代方案請見 [`extension/README.md`](extension/README.md)。
+
 ## 可用指令
 
 | 指令 | 說明 |
@@ -47,6 +57,7 @@ npm run dev
 | `npm run build` | 生產 build |
 | `npm run start` | 啟動 production server |
 | `npm run lint` | ESLint flat config 檢查 |
+| `npm test` | 執行 Node / TypeScript 測試 |
 | `npm run db:generate` | 從 schema 變更產生 migration |
 | `npm run db:migrate` | 執行 migration |
 | `npm run db:studio` | 開啟 Drizzle Studio (瀏覽資料庫) |
@@ -60,6 +71,10 @@ npm run dev
 - `TURSO_DATABASE_URL` — Turso libSQL URL
 - `TURSO_AUTH_TOKEN` — Turso auth token
 - `APP_SECRET` — 登入密碼（≥8 字元）
+- `GITHUB_REPO` — 觸發工作流程的 AvBatch repo（`c14712369/Batch-AvBatch`）
+- `GITHUB_TOKEN` — GitHub token；最小權限為僅限目標 repo 的 **Actions: write**
+
+部署 AvCollect 前，請先部署包含 workflow inputs 的 AvBatch 工作流程，否則 AvCollect 無法帶入參數觸發工作流程。
 
 新環境部署：
 
@@ -68,6 +83,8 @@ vercel link
 vercel env add TURSO_DATABASE_URL production --value "libsql://..." --yes
 vercel env add TURSO_AUTH_TOKEN production --value "ey..." --yes
 vercel env add APP_SECRET production --value "your-secret" --yes
+vercel env add GITHUB_REPO production --value "c14712369/Batch-AvBatch" --yes
+vercel env add GITHUB_TOKEN production --value "github_pat_..." --yes
 vercel deploy --prod --yes
 ```
 
@@ -77,7 +94,7 @@ vercel deploy --prod --yes
 |--------|------|
 | `Cmd/Ctrl + K` | 聚焦搜尋框 |
 | `F` | 切換「只看收藏」 |
-| `Esc` | 關閉開啟中的 Modal |
+| `Esc` | 關閉開啟中的對話框或卡片選單 |
 
 ## 主要功能
 
@@ -87,10 +104,11 @@ vercel deploy --prod --yes
 - 🎛️ 多維篩選（來源、分類、廠商、主題）
 - ❤️ 收藏管理（樂觀更新 + 雲端持久化）
 - 🕷️ 一鍵新增（Jable / MissAV / Javrate 自動爬蟲）
-- 🖼️ 影片詳情 Modal（含主題標籤）
+- 🖱️ 點擊卡片直接開啟原站；右鍵或長按顯示操作選單
+- 🧭 搭配瀏覽器擴充功能在背景開片，AvCollect 維持聚焦
 - 🌗 Light / Dark 主題切換
 - 📦 收藏 JSON 匯入匯出
-- ⚡ 虛擬化卡片格線（@tanstack/react-virtual）
+- ⚡ 24 部一頁的卡片格線與 URL 分頁
 - 🎨 毛玻璃風格 + Framer Motion 動畫
 
 ## 專案結構
@@ -113,9 +131,9 @@ src/
   components/
     HomeView.tsx            Client container（搜尋/篩選/state）
     Header.tsx              頂部欄（含 SearchInput / ThemeToggle / LogoutButton）
-    MovieGrid.tsx           虛擬化格線
-    AvCard.tsx              影片卡片（3:4 portrait, 無圖 fallback）
-    MovieDetailModal.tsx    詳情 Modal
+    MovieGrid.tsx           分頁卡片格線與操作選單狀態
+    AvCard.tsx              影片卡片（點擊開片、右鍵/長按選單）
+    CardContextMenu.tsx     卡片操作選單
     ImportExportDialog.tsx
     AddMovieDialog.tsx
     ThemeToggle.tsx
@@ -133,6 +151,7 @@ src/
     env.ts                  t3-env 環境變數驗證
     validators.ts           Zod schemas
     metadata.ts             番號 → 製作商/主題/女優萃取
+    open-movie.ts           背景分頁橋接與一般瀏覽器 fallback
     utils.ts                cn() helper
   middleware.ts             路由保護（攔截未登入）
   types/
@@ -140,4 +159,5 @@ src/
 docs/
   ARCHITECTURE.md           AvBatch ↔ AvCollect 協作指南
   superpowers/plans/        歷史改造計畫
+extension/                  Chrome / Edge 背景開片擴充功能
 ```
