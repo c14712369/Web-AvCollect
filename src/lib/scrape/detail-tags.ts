@@ -70,11 +70,18 @@ function missavActress($: CheerioAPI): string | null {
 /**
  * Jable：.models a 內的頭像 title 屬性。
  * 有照片時是 <img title="全名">，無照片時是 <span class="placeholder" title="全名">姓氏首字</span>，
- * 兩種都以 title 為準；連結文字在 placeholder 情況只有一個字，僅當最後 fallback。
+ * 兩種都以 title 為準；瀏覽器渲染後的 DOM 會被 Bootstrap tooltip 搬到 data-original-title，
+ * 兩者都讀。連結文字在 placeholder 情況只有一個字，單字時寧可回 null。
+ * 與 AvBatch 的 extractJableActress 同步。
  */
 function jableActress($: CheerioAPI): string | null {
   const link = $('.models a').first();
-  const text = link.find('[title]').first().attr('title')?.trim() || link.text().trim();
+  const avatar = link.find('[title], [data-original-title]').first();
+  const linkText = link.text().trim();
+  const text =
+    avatar.attr('title')?.trim() ||
+    avatar.attr('data-original-title')?.trim() ||
+    (linkText.length > 1 ? linkText : '');
   return text || null;
 }
 

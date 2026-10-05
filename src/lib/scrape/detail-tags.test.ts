@@ -53,3 +53,23 @@ test('Javrate：多位女優以頓號串接', () => {
     <div class="actor-card"><h5><a href="/actor/detail/a2.html">石川澪</a></h5></div>`);
   assert.equal(extractActressBySource('Javrate', $), '河北彩伽、石川澪');
 });
+
+// 瀏覽器渲染後（FlareSolverr / 開發者工具存檔）Bootstrap tooltip 會把 title 搬到
+// data-original-title 並清空 title；與 AvBatch extractJableActress 同步。
+test('Jable：tooltip 初始化後 title 被清空，改取 data-original-title 全名', () => {
+  const $ = cheerio.load(`
+    <div class="models">
+      <a class="model" href="https://jable.tv/models/f0cd3e51837502d20e9a99322fa3791b/">
+        <span class="placeholder rounded-circle" data-toggle="tooltip" title="" data-original-title="黒島玲衣">黒</span>
+      </a>
+    </div>`);
+  assert.equal(extractActressBySource('Jable', $), '黒島玲衣');
+});
+
+test('Jable：只剩單字 placeholder 文字時不當女優名', () => {
+  const $ = cheerio.load(`
+    <div class="models">
+      <a class="model" href="/models/x/"><span class="placeholder rounded-circle" title="">黒</span></a>
+    </div>`);
+  assert.equal(extractActressBySource('Jable', $), null);
+});
