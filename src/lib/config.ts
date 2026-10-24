@@ -11,7 +11,8 @@ interface AppConfig {
   blockedTags: string[];
 }
 
-const FALLBACK: AppConfig = {
+/** DB 裡「從沒設定過」的 key 才用這組空預設；讀取失敗一律拋錯，不得落到這裡。 */
+const MISSING_KEY_DEFAULTS: AppConfig = {
   trackedTags: [],
   makerMap: {},
   preferredIssuers: [],
@@ -42,19 +43,25 @@ let inflight: Promise<AppConfig> | null = null;
 
 async function loadFromDb(): Promise<AppConfig> {
   const rows = await db.select().from(appConfig);
-  const result: AppConfig = { ...FALLBACK };
+  const result: AppConfig = { ...MISSING_KEY_DEFAULTS };
   for (const row of rows) {
     const camelKey = KEY_MAP[row.key];
     if (!camelKey) continue;
     try {
       (result as unknown as Record<string, unknown>)[camelKey] = JSON.parse(row.value);
     } catch {
-      console.error(`[config] failed to parse ${row.key}:`, row.value);
+      // 壞值當空值會讓下一次 merge 寫入（例如 maker_map）把整份設定洗掉
+      throw new Error(`[config] ${row.key} 不是合法 JSON：${row.value.slice(0, 80)}`);
     }
   }
   return result;
 }
 
+/**
+ * 讀取全部設定；DB 失敗或資料損壞時拋錯。
+ * 不可回傳空設定當備援：/api/config 的 makerMap merge、設定頁存檔都會拿它當
+ * 「目前狀態」寫回去，等於把真資料洗成空的（同 2026-09-21 收藏洗空事故）。
+ */
 export async function getConfig(): Promise<AppConfig> {
   // 同一請求內並發呼叫去重（避免一次 render 內多次 await getConfig 觸發多筆 DB）
   if (inflight) return inflight;
@@ -62,10 +69,6 @@ export async function getConfig(): Promise<AppConfig> {
     .then((cfg) => {
       lastLoaded = cfg;
       return cfg;
-    })
-    .catch((err) => {
-      console.error('[config] load failed, using fallback:', err);
-      return FALLBACK;
     })
     .finally(() => {
       inflight = null;
@@ -75,7 +78,7 @@ export async function getConfig(): Promise<AppConfig> {
 
 /** 已 await 過 getConfig 後的同步存取（給 metadata.ts 之類的純函式用）。 */
 export function getCachedConfig(): AppConfig {
-  return lastLoaded ?? FALLBACK;
+  return lastLoaded ?? MISSING_KEY_DEFAULTS;
 }
 
 /** 留作 no-op 相容介面（不再需要顯式 invalidate；每次 getConfig 都會重讀）。 */

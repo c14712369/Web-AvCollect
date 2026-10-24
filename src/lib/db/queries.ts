@@ -22,21 +22,24 @@ import {
 import type { Movie } from '@/types/av';
 import { getPlaceholderRepairPatch, shouldUpgradeSource } from '@/lib/manual-movie';
 
-/** 解析 DB tags 欄（JSON string[]），壞資料/空值回空陣列。 */
-const parseTags = (raw: string | null): string[] => {
-  if (!raw) return [];
+/**
+ * 解析 DB 的 JSON string[] 欄位。空值或壞資料回 null（= 未知），
+ * 不回 []：「未知」和「確定是空的」必須分開，否則拿去寫回就會洗掉資料。
+ */
+const parseStringArray = (raw: string | null): string[] | null => {
+  if (!raw) return null;
   try {
     const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === 'string') : [];
+    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === 'string') : null;
   } catch {
-    return [];
+    return null;
   }
 };
 
-/** 一部片的有效主題：優先用詳情頁抓的真實類型，沒有才退回標題比對追蹤標籤。 */
+/** 一部片的有效主題：優先用詳情頁抓的真實類型，沒有（或壞掉）才退回標題比對追蹤標籤。 */
 const themesOf = (row: typeof movies.$inferSelect): string[] => {
-  const real = parseTags(row.tags);
-  return real.length ? real : extractThemes(row.title);
+  const real = parseStringArray(row.tags);
+  return real?.length ? real : extractThemes(row.title);
 };
 
 const enrich = (row: typeof movies.$inferSelect, prefActresses: string[]): Movie => {
@@ -384,11 +387,12 @@ export const listFavoritesSnapshots = async (): Promise<FavoritesSnapshot[]> => 
     .select()
     .from(favoritesSnapshots)
     .orderBy(desc(favoritesSnapshots.id));
-  return rows.map((r) => ({
-    takenAt: r.takenAt,
-    reason: r.reason,
-    codes: parseTags(r.codes),
-  }));
+  return rows.map((r) => {
+    const codes = parseStringArray(r.codes);
+    // 快照是救援用的，壞掉要大聲失敗，不能變成一份「空收藏」被拿去還原
+    if (!codes) throw new Error(`[favorites] 快照 #${r.id} 的 codes 損壞，無法解析`);
+    return { takenAt: r.takenAt, reason: r.reason, codes };
+  });
 };
 
 /**

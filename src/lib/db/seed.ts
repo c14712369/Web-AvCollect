@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createClient } from '@libsql/client';
@@ -25,10 +26,10 @@ async function main() {
   const favoritesPath = path.join(process.cwd(), 'src', 'lib', 'favorites.json');
 
   const moviesRaw = JSON.parse(await fs.readFile(moviesPath, 'utf-8')) as JsonMovie[];
-  const favoritesRaw: string[] = await fs
-    .readFile(favoritesPath, 'utf-8')
-    .then((s) => JSON.parse(s))
-    .catch(() => []);
+  // 只有「檔案不存在」才視為沒有收藏；讀取或解析失敗一律拋錯
+  const favoritesRaw: string[] = existsSync(favoritesPath)
+    ? JSON.parse(await fs.readFile(favoritesPath, 'utf-8'))
+    : [];
 
   console.log(`Seeding ${moviesRaw.length} movies and ${favoritesRaw.length} favorites...`);
 
