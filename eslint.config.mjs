@@ -30,6 +30,15 @@ const emptyFallbackSelectors = [
   'LogicalExpression[operator="??"][left.callee.property.name="getQueryData"] > ArrayExpression[elements.length=0]',
 ];
 
+const MICRO_FONT_MSG =
+  '禁止小於 10px 的微型字體（CLAUDE.md UI 規範，行動端不可讀）。主要資訊用 text-xs 以上；次要徽章最小 text-[10px]。';
+const MICRO_FONT = '/text-\\[\\d(\\.\\d+)?px\\]/';
+
+const microFontSelectors = [
+  `Literal[value=${MICRO_FONT}]`,
+  `TemplateElement[value.raw=${MICRO_FONT}]`,
+];
+
 export default [
   {
     ignores: ['.next/**', 'node_modules/**', 'drizzle/**', 'local.db', '*.config.*', '**/*.backup.*'],
@@ -59,6 +68,7 @@ export default [
       'no-restricted-syntax': [
         'error',
         ...emptyFallbackSelectors.map((selector) => ({ selector, message: EMPTY_FALLBACK_MSG })),
+        ...microFontSelectors.map((selector) => ({ selector, message: MICRO_FONT_MSG })),
       ],
     },
   },
