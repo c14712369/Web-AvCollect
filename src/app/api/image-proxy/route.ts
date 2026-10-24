@@ -1,18 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getImageReferer } from '@/lib/image-proxy';
-
-// 僅允許從這些網域代理圖片，避免 SSRF（探測內網 / 雲端 metadata）
-const ALLOWED_HOSTS = [
-  'sixyik.com',
-  'cdn.jable.tv',
-  'jable.tv',
-  'missav.com',
-  'fourhoi.com',
-  'eightcdn.com',
-  'avking.xyz',
-  'supjav.com',
-  'javrate.com',
-];
+import { getImageReferer, isAllowedImageHost } from '@/lib/image-proxy';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -32,10 +19,8 @@ export async function GET(request: Request) {
   if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
     return new NextResponse('Disallowed protocol', { status: 400 });
   }
-  const isAllowed = ALLOWED_HOSTS.some(
-    (h) => parsed.hostname === h || parsed.hostname.endsWith('.' + h)
-  );
-  if (!isAllowed) {
+  // 白名單唯一來源：src/lib/image-proxy.ts IMAGE_HOST_REFERERS
+  if (!isAllowedImageHost(parsed.hostname)) {
     return new NextResponse('Disallowed host', { status: 400 });
   }
 

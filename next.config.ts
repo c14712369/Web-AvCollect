@@ -1,27 +1,13 @@
 import type { NextConfig } from "next";
+import { IMAGE_HOSTS } from "./src/lib/image-proxy";
 
 const nextConfig: NextConfig = {
   images: {
-    // 與 src/app/api/image-proxy/route.ts 的 ALLOWED_HOSTS 維持一致，避免 SSRF。
-    remotePatterns: [
-      { protocol: 'https', hostname: 'sixyik.com' },
-      { protocol: 'https', hostname: '**.sixyik.com' },
-      { protocol: 'https', hostname: 'cdn.jable.tv' },
-      { protocol: 'https', hostname: 'jable.tv' },
-      { protocol: 'https', hostname: '**.jable.tv' },
-      { protocol: 'https', hostname: 'missav.com' },
-      { protocol: 'https', hostname: '**.missav.com' },
-      { protocol: 'https', hostname: 'fourhoi.com' },
-      { protocol: 'https', hostname: '**.fourhoi.com' },
-      { protocol: 'https', hostname: 'eightcdn.com' },
-      { protocol: 'https', hostname: '**.eightcdn.com' },
-      { protocol: 'https', hostname: 'avking.xyz' },
-      { protocol: 'https', hostname: '**.avking.xyz' },
-      { protocol: 'https', hostname: 'supjav.com' },
-      { protocol: 'https', hostname: '**.supjav.com' },
-      { protocol: 'https', hostname: 'javrate.com' },
-      { protocol: 'https', hostname: '**.javrate.com' },
-    ],
+    // 由 src/lib/image-proxy.ts 的白名單產生（與 /api/image-proxy 同一份），禁止萬用 `**`。
+    remotePatterns: IMAGE_HOSTS.flatMap((hostname) => [
+      { protocol: 'https' as const, hostname },
+      { protocol: 'https' as const, hostname: `**.${hostname}` },
+    ]),
   },
 };
 
