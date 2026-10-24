@@ -24,7 +24,7 @@
 | 清單類寫入（收藏、設定）只送 add/remove，禁止前端推整份清單覆蓋 | 架構：`favoritesWriteSchema`／`configWriteSchema` 拒收裸陣列，差異工具在 `src/lib/config-patch.ts`；測試：`src/app/api/config/route.test.ts`、`src/lib/validators.test.ts` |
 | SSRF：圖片代理只放行白名單網域；`remotePatterns` 禁止萬用 `**` | 架構：唯一來源 `src/lib/image-proxy.ts` 的 `IMAGE_HOST_REFERERS`（新增圖床只改這裡）；測試：`src/lib/image-proxy.test.ts` |
 | 禁止小於 10px 的微型字體（主要資訊最低 `text-xs`） | lint：`no-restricted-syntax`（`text-[Npx]`，N<10） |
-| 本機與 CI 跑同一支驗證 | `npm run verify`（`.github/workflows/ci.yml` 呼叫同一支） |
+| 本機、CI、Vercel 跑同一支驗證、同一版 Node | `npm run verify`（`.github/workflows/ci.yml` 呼叫同一支）；Node 版本唯一來源 `package.json` 的 `engines.node`（CI 用 `node-version-file`，Vercel 也讀它） |
 | 詳情頁爬蟲選擇器改一邊必須同步 AvBatch `src/scrapers/detail-tags.ts` 並各補測試 | **無**（文件規則；兩邊已腐爛兩次，待比照 taste-core 做 sync/check） |
 | 主要資訊是否該用 `text-xs`、`text-[10px]` 是否只用在次要徽章 | 判斷（文件規則） |
 | Drizzle 操作一律 typed、零 SQL 字串拼接；API route 以 Zod 驗證 | 部分：tsc；字串拼接無 lint（判斷） |

@@ -12,7 +12,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Node 版本唯一來源：package.json engines.node（Vercel 也讀它）。
+          # 舊寫死 20 與本機/Vercel 的 24 不一致，tsx --test 的 glob 在 20 不支援。
+          node-version-file: package.json
           # 不開 npm 快取：本機全域 gitignore 排除 package-lock.json，
           # repo 無 lockfile 時 cache: npm 會在 setup-node 直接失敗
 
