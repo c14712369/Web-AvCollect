@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { favoritesWriteSchema } from './validators';
+import { configWriteSchema, favoritesWriteSchema } from './validators';
 
 test('收藏寫入接受單筆增刪指令', () => {
   const add = favoritesWriteSchema.safeParse({ op: 'add', code: 'SSIS-001' });
@@ -20,4 +20,18 @@ test('缺漏或空白的番號一律拒絕', () => {
   assert.equal(favoritesWriteSchema.safeParse({ op: 'add', code: '' }).success, false);
   assert.equal(favoritesWriteSchema.safeParse({ op: 'add' }).success, false);
   assert.equal(favoritesWriteSchema.safeParse({ op: 'nuke', code: 'A-1' }).success, false);
+});
+
+// 設定清單同收藏：裸陣列＝整份覆蓋，前端讀取失敗時會把真資料洗成空的。
+test('設定清單只接受 add/remove 差異，裸陣列一律拒絕', () => {
+  assert.equal(configWriteSchema.safeParse({ preferredActresses: ['只剩我'] }).success, false);
+  assert.equal(configWriteSchema.safeParse({ blockedIssuers: ['SSIS'] }).success, false);
+  assert.equal(configWriteSchema.safeParse({ trackedTags: { add: ['巨乳'], remove: ['熟女'] } }).success, true);
+  assert.equal(configWriteSchema.safeParse({ blockedIssuers: { remove: ['SSIS'] } }).success, true);
+  assert.equal(configWriteSchema.safeParse({ trackedTags: { replace: ['A'] } }).success, false);
+});
+
+test('makerMap 維持「只補/改傳入的 prefix」語意', () => {
+  assert.equal(configWriteSchema.safeParse({ makerMap: { SSIS: 'S1' } }).success, true);
+  assert.equal(configWriteSchema.safeParse({ makerMap: { 'bad prefix!': 'S1' } }).success, false);
 });

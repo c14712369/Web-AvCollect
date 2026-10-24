@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Plus, X, Tag, Ban, Sparkles, Loader2, Check, Save, RefreshCw, Star, Building2, Wrench } from 'lucide-react';
 import type { TagSettings } from '@/lib/db/queries';
+import type { ConfigWriteInput } from '@/lib/validators';
+import { diffList, mergeListDelta, type ListDelta } from '@/lib/config-patch';
 import { MakerPrefixManager } from './MakerPrefixManager';
 
 interface Props {
@@ -33,13 +35,19 @@ export function SettingsView({ initial }: Props) {
   const [savedAt, setSavedAt] = useState(0);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<SettingsTab>('tags');
+  // 最後一次成功存檔的清單；存檔只送與它的差異
+  const [saved, setSaved] = useState({
+    trackedTags: initial.trackedTags,
+    blockedTags: initial.blockedTags,
+    preferredActresses: initial.preferredActresses,
+  });
 
   const dirty = useMemo(
     () =>
-      JSON.stringify(tracked) !== JSON.stringify(initial.trackedTags) ||
-      JSON.stringify(blocked) !== JSON.stringify(initial.blockedTags) ||
-      JSON.stringify(preferredActresses) !== JSON.stringify(initial.preferredActresses),
-    [tracked, blocked, preferredActresses, initial]
+      JSON.stringify(tracked) !== JSON.stringify(saved.trackedTags) ||
+      JSON.stringify(blocked) !== JSON.stringify(saved.blockedTags) ||
+      JSON.stringify(preferredActresses) !== JSON.stringify(saved.preferredActresses),
+    [tracked, blocked, preferredActresses, saved]
   );
 
   const addTo = (list: string[], set: (v: string[]) => void, raw: string) => {
@@ -57,7 +65,7 @@ export function SettingsView({ initial }: Props) {
   // 收到 success 後 *不再* 覆寫 UI state，因為樂觀更新已經是 user intent；
   // 失敗才從 server fetch 真實狀態同步。
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingPatchRef = useRef<{ blockedIssuers?: string[]; makerMap?: Record<string, string> }>({});
+  const pendingPatchRef = useRef<{ blockedIssuers?: ListDelta; makerMap?: Record<string, string> }>({});
   const abortRef = useRef<AbortController | null>(null);
 
   const flushPersist = async () => {
@@ -70,10 +78,11 @@ export function SettingsView({ initial }: Props) {
     abortRef.current = ctrl;
 
     try {
+      const body: ConfigWriteInput = patch;
       const res = await fetch('/api/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(patch),
+        body: JSON.stringify(body),
         signal: ctrl.signal,
       });
       const data = await res.json();
@@ -98,7 +107,11 @@ export function SettingsView({ initial }: Props) {
     if (patch.blockedIssuers) setBlockedIssuers(patch.blockedIssuers);
     if (patch.makerMap) setMakerMap((prev) => ({ ...prev, ...patch.makerMap }));
 
-    if (patch.blockedIssuers) pendingPatchRef.current.blockedIssuers = patch.blockedIssuers;
+    // MakerPrefixManager 給的是切換後的完整清單，這裡轉成差異再累積，絕不整份送出
+    const delta = patch.blockedIssuers && diffList(blockedIssuers, patch.blockedIssuers);
+    if (delta) {
+      pendingPatchRef.current.blockedIssuers = mergeListDelta(pendingPatchRef.current.blockedIssuers, delta);
+    }
     if (patch.makerMap) {
       pendingPatchRef.current.makerMap = {
         ...(pendingPatchRef.current.makerMap ?? {}),
@@ -114,16 +127,26 @@ export function SettingsView({ initial }: Props) {
     setSaving(true);
     setError('');
     try {
+      const body: ConfigWriteInput = {
+        trackedTags: diffList(saved.trackedTags, tracked),
+        blockedTags: diffList(saved.blockedTags, blocked),
+        preferredActresses: diffList(saved.preferredActresses, preferredActresses),
+      };
       const res = await fetch('/api/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trackedTags: tracked, blockedTags: blocked, preferredActresses }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!data.success) throw new Error(typeof data.error === 'string' ? data.error : '儲存失敗');
       setTracked(data.trackedTags);
       setBlocked(data.blockedTags);
       setPreferredActresses(data.preferredActresses);
+      setSaved({
+        trackedTags: data.trackedTags,
+        blockedTags: data.blockedTags,
+        preferredActresses: data.preferredActresses,
+      });
       setSuggestions(data.suggestions);
       setBlockedSuggestions(data.blockedSuggestions);
       setActressSuggestions(data.actressSuggestions);
