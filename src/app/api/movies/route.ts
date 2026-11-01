@@ -10,6 +10,7 @@ import { eq } from 'drizzle-orm';
 import { extractTagsBySource, extractActressBySource } from '@/lib/scrape/detail-tags';
 import { getFallbackCoverUrl, getManualMovieIdentity, isUnusableDetailPage } from '@/lib/manual-movie';
 import { enrichPersistedMovie } from '@/lib/metadata-enrichment';
+import { canonicalizeActressName } from '@/lib/actress-matcher';
 
 export const dynamic = 'force-dynamic';
 
@@ -182,7 +183,8 @@ export async function POST(req: Request) {
     if (genres.length > 0) tags = JSON.stringify(genres);
 
     // 從結構化欄位抓女優名（比 regex 從標題猜可靠得多）
-    const actress = extractActressBySource(source, $);
+    const rawActress = extractActressBySource(source, $);
+    const actress = canonicalizeActressName(rawActress) || rawActress;
 
     const result = await upsertMovieBySourcePriority({
       code,

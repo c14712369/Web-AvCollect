@@ -135,24 +135,16 @@ export function HomeView({ initialMovies }: HomeViewProps) {
     return counts;
   }, [showFavoritesOnly, showFavActressOnly, favoriteMovies, preferredActresses, movies]);
 
-  // 女優篩選下拉選單選項（按收藏片數降冪排列，同片數再按筆劃/字母排序）
+  // 女優篩選下拉選單選項（按片數降冪排列，同片數再按筆劃/字母排序）
   const availableFavActressesOrdered = useMemo(() => {
     const names = Object.keys(favActressCounts);
-    const favCountOf = (name: string) => {
-      if (showFavoritesOnly) return favActressCounts[name] || 0;
-      return favoriteMovies.filter(
-        (m) => (!!m.actress && matchActress(name, m.actress)) || matchActress(name, m.title)
-      ).length;
-    };
-    const countMap: Record<string, number> = {};
-    for (const name of names) countMap[name] = favCountOf(name);
     names.sort((a, b) => {
-      const diff = countMap[b] - countMap[a];
+      const diff = (favActressCounts[b] || 0) - (favActressCounts[a] || 0);
       if (diff !== 0) return diff;
       return a.localeCompare(b, 'zh-Hant');
     });
     return ['全部', ...names];
-  }, [favActressCounts, showFavoritesOnly, favoriteMovies]);
+  }, [favActressCounts]);
  
   const filtered = useMemo(() => {
     // 預售新片走獨立來源，直接轉換為 Movie 格式

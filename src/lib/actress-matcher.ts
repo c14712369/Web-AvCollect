@@ -165,7 +165,8 @@ export function countActressAppearances(
         best = n;
       }
     }
-    counts[label] = group.total;
+    const canonicalLabel = CANONICAL_ACTRESS_MAP[label] || label;
+    counts[canonicalLabel] = (counts[canonicalLabel] || 0) + group.total;
   }
   return counts;
 }
@@ -194,8 +195,13 @@ export function matchActress(prefName: string, targetText: string): boolean {
 /** 結構化女優欄位 → 女優名清單；括號內的別名/讀音（如「松本一香 (松本いちか)」）視為同一人。 */
 export function listActressNames(actress: string | null | undefined): string[] {
   if (!actress) return [];
-  const names = actress
-    .replace(/\s*[（(][^）)]*[）)]/g, '')
+  const cleaned = actress.replace(/\s*[（(][^）)]*[）)]/g, '').trim();
+  if (!cleaned) return [];
+  // 若為純英文字串且不含標點分隔（逗號、頓號等），保留完整英文姓名（如 "Rae Lil Black"）
+  if (/^[A-Za-z0-9\s.'-]+$/.test(cleaned) && !/[,/|]/.test(cleaned)) {
+    return [cleaned];
+  }
+  const names = cleaned
     .split(ACTRESS_SPLIT_REGEX)
     .map((a) => a.trim())
     .filter(Boolean);
