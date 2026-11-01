@@ -27,3 +27,16 @@ test('debounce 期間的多次切換合併成最後意圖', () => {
   assert.deepEqual(merged, { add: ['B'], remove: ['A'] });
   assert.deepEqual(mergeListDelta(undefined, { add: ['A'] }), { add: ['A'], remove: [] });
 });
+
+test('喜愛女優右鍵切換差異套用：增刪不影響其他既有女優且去重', () => {
+  const current = ['相澤みなみ', '三上悠亜'];
+  const added = applyListDelta(current, { add: ['河北彩花'] });
+  assert.deepEqual(added, ['相澤みなみ', '三上悠亜', '河北彩花']);
+
+  const removed = applyListDelta(added, { remove: ['相澤みなみ'] });
+  assert.deepEqual(removed, ['三上悠亜', '河北彩花']);
+
+  const reAddDuplicate = applyListDelta(removed, { add: ['三上悠亜'] });
+  assert.deepEqual(reAddDuplicate, ['三上悠亜', '河北彩花']);
+});
+

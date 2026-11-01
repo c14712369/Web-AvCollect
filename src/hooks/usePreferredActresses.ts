@@ -1,6 +1,7 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { applyListDelta } from '@/lib/config-patch';
 
 const QUERY_KEY = ['preferred-actresses'] as const;
 
@@ -22,3 +23,48 @@ export const usePreferredActresses = (): string[] => {
   });
   return data;
 };
+
+export interface ToggleActressPayload {
+  names: string[];
+  action: 'add' | 'remove';
+}
+
+/**
+ * 喜愛女優快捷切換（右鍵選單用）。
+ * 遵守守則：以 delta 方式送出 add / remove，禁止整份清單覆蓋。
+ */
+export const useTogglePreferredActress = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ names, action }: ToggleActressPayload) => {
+      const res = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          preferredActresses: action === 'add' ? { add: names } : { remove: names },
+        }),
+      });
+      if (!res.ok) throw new Error(`喜愛女優更新失敗：HTTP ${res.status}`);
+      return res.json();
+    },
+    onMutate: async ({ names, action }) => {
+      await queryClient.cancelQueries({ queryKey: QUERY_KEY });
+      const prev = queryClient.getQueryData<string[]>(QUERY_KEY);
+      if (prev) {
+        const delta = action === 'add' ? { add: names } : { remove: names };
+        queryClient.setQueryData(QUERY_KEY, applyListDelta(prev, delta));
+      }
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(QUERY_KEY, ctx.prev);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['movies'] });
+    },
+  });
+};
+
+
