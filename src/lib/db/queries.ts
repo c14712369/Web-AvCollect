@@ -294,7 +294,7 @@ export const upsertMovieBySourcePriority = async (
 
   const current = existing[0];
   // 這次詳情頁被擋/已下架 → 拿到的只是猜測封面與番號，不可拿來覆蓋既有片源連結
-  const upgrade = !opts.metadataUnavailable && shouldUpgradeSource(current.source, data.source);
+  const upgrade = !opts.metadataUnavailable && shouldUpgradeSource(current, data);
   // 既有資料是佔位片（標題=番號/錯誤頁、封面空白或死鏈）→ 這次抓到什麼就補什麼，即使同片源
   const patch = upgrade ? {} : getPlaceholderRepairPatch(current, data);
   if (!upgrade && !patch) {

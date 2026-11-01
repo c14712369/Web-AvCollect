@@ -118,7 +118,21 @@ export function HomeView({ initialMovies }: HomeViewProps) {
   // 收藏限定時可從所有收藏作品篩女優；一般「喜愛女優」模式僅列手動追蹤名單。
   const favActressCounts = useMemo(() => {
     if (showFavoritesOnly) {
-      return countActressAppearances(favoriteMovies.map((m) => m.actress));
+      const baseCounts = countActressAppearances(favoriteMovies.map((m) => m.actress));
+      const candidateNames = new Set([
+        ...Object.keys(baseCounts),
+        ...preferredActresses.map((a) => a.trim()).filter(Boolean),
+      ]);
+      const counts: Record<string, number> = {};
+      for (const act of candidateNames) {
+        const count = favoriteMovies.filter(
+          (m) => (!!m.actress && matchActress(act, m.actress)) || matchActress(act, m.title)
+        ).length;
+        if (count > 0) {
+          counts[act] = count;
+        }
+      }
+      return counts;
     }
     if (!showFavActressOnly) return {};
     const counts: Record<string, number> = {};

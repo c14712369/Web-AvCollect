@@ -16,11 +16,75 @@ test('Jable 單片網址可在無法抓取詳情頁時取得標準番號', () =>
   );
 });
 
-test('只允許較高優先度片源覆蓋既有連結（Javrate > Jable > MissAV）', () => {
-  assert.equal(shouldUpgradeSource('MissAV', 'Jable'), true);
-  assert.equal(shouldUpgradeSource('Jable', 'Javrate'), true);
-  assert.equal(shouldUpgradeSource('Javrate', 'Jable'), false);
-  assert.equal(shouldUpgradeSource('Jable', 'MissAV'), false);
+test('片源優先級：高畫質優先 ➔ Javrate 無碼 ➔ 同畫質普通有碼 Jable 優先', () => {
+  // 1. 同為 720p 普通有碼：Jable 播放順暢度優於 Javrate 與 MissAV
+  assert.equal(shouldUpgradeSource({ source: 'Javrate', code: 'MIDA-837' }, { source: 'Jable', code: 'MIDA-837' }), true);
+  assert.equal(shouldUpgradeSource({ source: 'MissAV', code: 'MIDA-837' }, { source: 'Jable', code: 'MIDA-837' }), true);
+  assert.equal(shouldUpgradeSource({ source: 'Jable', code: 'MIDA-837' }, { source: 'Javrate', code: 'MIDA-837' }), false);
+
+  // 2. 劇情用語「愛液流出/体液流出」不誤判為無碼，普通有碼仍應轉至 Jable
+  assert.equal(
+    shouldUpgradeSource(
+      { source: 'Javrate', code: 'FNS-191', title: '愛液流出絕頂痙攣 楓富愛' },
+      { source: 'Jable', code: 'FNS-191' }
+    ),
+    true
+  );
+
+  // 3. Javrate 無碼（天然無碼、-U、標題含無碼）：優先度高於 Jable 有碼
+  assert.equal(
+    shouldUpgradeSource(
+      { source: 'Javrate', code: 'FC2-PPV-1234567' },
+      { source: 'Jable', code: 'FC2-PPV-1234567' }
+    ),
+    false
+  );
+  assert.equal(
+    shouldUpgradeSource(
+      { source: 'Javrate', code: 'MIDA-837-U' },
+      { source: 'Jable', code: 'MIDA-837' }
+    ),
+    false
+  );
+  assert.equal(
+    shouldUpgradeSource(
+      { source: 'Javrate', code: 'FNS-272', title: 'FNS-272 無碼破解流出' },
+      { source: 'Jable', code: 'FNS-272' }
+    ),
+    false
+  );
+
+  // 4. 高畫質碾壓：1080p / 4K 優於 720p
+  assert.equal(
+    shouldUpgradeSource(
+      { source: 'Jable', code: 'MIDA-837' },
+      { source: 'MissAV', code: 'MIDA-837', title: 'MIDA-837 [1080p]' }
+    ),
+    true
+  );
+  assert.equal(
+    shouldUpgradeSource(
+      { source: 'MissAV', code: 'MIDA-837', title: 'MIDA-837 [1080p]' },
+      { source: 'Jable', code: 'MIDA-837' }
+    ),
+    false
+  );
+  assert.equal(
+    shouldUpgradeSource(
+      { source: 'MissAV', code: 'MIDA-837', title: 'MIDA-837 [1080p]' },
+      { source: 'Jable', code: 'MIDA-837', title: 'MIDA-837 4K' }
+    ),
+    true
+  );
+
+  // 5. 未知來源即使標註 1080p 也絕不覆蓋已知來源（防止惡意偽裝）
+  assert.equal(
+    shouldUpgradeSource(
+      { source: 'Jable', code: 'MIDA-837' },
+      { source: 'UnknownSite', code: 'MIDA-837', title: 'MIDA-837 1080p' }
+    ),
+    false
+  );
 });
 
 test('詳情頁被擋時，封面備援改用 MissAV 現役 CDN（fourhoi），無碼流出保留完整 slug', () => {
