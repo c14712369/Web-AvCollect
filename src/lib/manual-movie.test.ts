@@ -16,9 +16,10 @@ test('Jable 單片網址可在無法抓取詳情頁時取得標準番號', () =>
   );
 });
 
-test('只允許較高優先度片源覆蓋既有連結', () => {
+test('只允許較高優先度片源覆蓋既有連結（Javrate > Jable > MissAV）', () => {
   assert.equal(shouldUpgradeSource('MissAV', 'Jable'), true);
-  assert.equal(shouldUpgradeSource('Javrate', 'Jable'), true);
+  assert.equal(shouldUpgradeSource('Jable', 'Javrate'), true);
+  assert.equal(shouldUpgradeSource('Javrate', 'Jable'), false);
   assert.equal(shouldUpgradeSource('Jable', 'MissAV'), false);
 });
 

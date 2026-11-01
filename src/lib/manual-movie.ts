@@ -1,8 +1,8 @@
 export type ManualMovieSource = 'Jable' | 'Javrate' | 'MissAV' | 'SupJav' | 'Unknown';
 
 const SOURCE_PRIORITY: Record<ManualMovieSource, number> = {
-  Jable: 3,
-  Javrate: 2,
+  Javrate: 3,
+  Jable: 2,
   MissAV: 1,
   SupJav: 0,
   Unknown: 0,
@@ -39,7 +39,7 @@ export function getManualMovieIdentity(url: string): {
   };
 }
 
-/** 同片號只允許高優先片源升級：Jable > Javrate > MissAV。 */
+/** 同片號只允許高優先片源升級：Javrate > Jable > MissAV。 */
 export function shouldUpgradeSource(current: string, incoming: string): boolean {
   const currentPriority = SOURCE_PRIORITY[current as ManualMovieSource] ?? 0;
   const incomingPriority = SOURCE_PRIORITY[incoming as ManualMovieSource] ?? 0;

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { countActressAppearances, matchActress } from './actress-matcher';
+import { countActressAppearances, matchActress, canonicalizeActressName } from './actress-matcher';
 import { listActressNames } from './actress-matcher';
 
 // 收藏限定的女優下拉選項來自收藏片的 actress 欄位切割，
@@ -75,4 +75,12 @@ test('countActressAppearances：括號別名不另成一位女優', () => {
   const counts = countActressAppearances(['松本一香 (松本いちか)', '松本一香']);
   assert.equal(Object.keys(counts).some((k) => k.includes('(') || k.includes('（')), false);
   assert.equal(Object.values(counts).reduce((a, b) => a + b, 0), 2);
+});
+
+test('canonicalizeActressName：將異體字/假名/舊藝名與括號別名統一為標準藝名', () => {
+  assert.equal(canonicalizeActressName('河北彩花'), '河北彩伽');
+  assert.equal(canonicalizeActressName('香水じゅん'), '香水純');
+  assert.equal(canonicalizeActressName('松本一香 (松本いちか)'), '松本一香');
+  assert.equal(canonicalizeActressName('逢沢みゆ、桜空もも'), '逢澤美優、櫻空桃');
+  assert.equal(canonicalizeActressName(null), null);
 });
