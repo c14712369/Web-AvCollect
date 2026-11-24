@@ -73,6 +73,27 @@ export const viewedMovies = sqliteTable('viewed_movies', {
     .default(sql`(unixepoch())`),
 });
 
+/**
+ * 自動清理的回收桶：刪片前整列搬來這裡（含原入庫時間），保留 30 天可從設定頁還原。
+ * 同時是 AvBatch 的黑名單：這裡有的番號視為「已處理過」，不再重新入庫或推播。
+ */
+export const deletedMovies = sqliteTable('deleted_movies', {
+  code: text('code').primaryKey(),
+  title: text('title').notNull(),
+  url: text('url').notNull(),
+  imageUrl: text('image_url').notNull(),
+  source: text('source').notNull(),
+  category: text('category').notNull(),
+  releaseDate: text('release_date'),
+  tags: text('tags'),
+  actress: text('actress'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(), // 原始入庫時間
+  deletedAt: integer('deleted_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  reason: text('reason').notNull(),
+});
+
 export type MovieRow = typeof movies.$inferSelect;
 export type MovieInsert = typeof movies.$inferInsert;
 export type FavoriteRow = typeof favorites.$inferSelect;
@@ -81,3 +102,4 @@ export type UpcomingMovieRow = typeof upcomingMovies.$inferSelect;
 export type UpcomingMovieInsert = typeof upcomingMovies.$inferInsert;
 export type ViewedMovieRow = typeof viewedMovies.$inferSelect;
 export type FavoritesSnapshotRow = typeof favoritesSnapshots.$inferSelect;
+export type DeletedMovieRow = typeof deletedMovies.$inferSelect;

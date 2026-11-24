@@ -8,6 +8,7 @@ import type { TagSettings } from '@/lib/db/queries';
 import type { ConfigWriteInput } from '@/lib/validators';
 import { diffList, mergeListDelta, type ListDelta } from '@/lib/config-patch';
 import { MakerPrefixManager } from './MakerPrefixManager';
+import { TrashCard } from './TrashCard';
 
 interface Props {
   initial: TagSettings;
@@ -326,7 +327,12 @@ export function SettingsView({ initial }: Props) {
               />
             )}
 
-            {tab === 'maintenance' && <BackfillCard />}
+            {tab === 'maintenance' && (
+              <>
+                <BackfillCard />
+                <TrashCard />
+              </>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>

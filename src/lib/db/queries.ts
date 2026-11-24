@@ -1,17 +1,19 @@
-import { desc, eq, and, lt, inArray, sql } from 'drizzle-orm';
+import { desc, eq, and, lt, sql } from 'drizzle-orm';
 import { db } from './client';
 import {
   movies,
   favorites,
   appConfig,
-  viewedMovies,
   favoritesSnapshots,
   type MovieInsert,
+  type MovieRow,
 } from './schema';
 import { extractMaker, extractThemes, extractActress } from '@/lib/metadata';
 import { matchActress } from '@/lib/actress-matcher';
 import { getConfig } from '@/lib/config';
 import { decideCleanup } from '@/lib/cleanup-guard';
+import { ensureViewedMoviesTable, listViewedCodes } from './viewed';
+import { moveMoviesToTrash, purgeExpiredTrash } from './movie-trash';
 import {
   buildProfileFromFeatures,
   classify,
@@ -80,47 +82,7 @@ const featuresOf = (row: typeof movies.$inferSelect, prefActresses: string[]): M
   };
 };
 
-/** 自動確保 viewed_movies 資料表存在。 */
-let ensuredViewedTable = false;
-export async function ensureViewedMoviesTable(): Promise<void> {
-  if (ensuredViewedTable) return;
-  try {
-    await db.run(
-      sql`CREATE TABLE IF NOT EXISTS viewed_movies (code TEXT PRIMARY KEY, viewed_at INTEGER NOT NULL DEFAULT (unixepoch()))`
-    );
-    ensuredViewedTable = true;
-  } catch (e) {
-    console.warn('[db] ensureViewedMoviesTable warning:', e);
-  }
-}
-
-/** 記錄使用者點進去瀏覽過的影片 */
-export async function recordMovieView(code: string): Promise<void> {
-  if (!code) return;
-  await ensureViewedMoviesTable();
-  try {
-    await db
-      .insert(viewedMovies)
-      .values({ code, viewedAt: new Date() })
-      .onConflictDoUpdate({
-        target: viewedMovies.code,
-        set: { viewedAt: new Date() },
-      });
-  } catch (err) {
-    console.warn('[db] recordMovieView failed:', err);
-  }
-}
-
-/** 取得所有已點擊瀏覽過的番號集合 */
-export async function listViewedCodes(): Promise<Set<string>> {
-  await ensureViewedMoviesTable();
-  try {
-    const rows = await db.select({ code: viewedMovies.code }).from(viewedMovies);
-    return new Set(rows.map((r) => r.code));
-  } catch {
-    return new Set();
-  }
-}
+export { ensureViewedMoviesTable, recordMovieView, listViewedCodes } from './viewed';
 
 let lastCleanupTime = 0;
 const CLEANUP_INTERVAL = 30 * 60 * 1000; // 每 30 分鐘最多檢查一次自動清理
@@ -130,9 +92,11 @@ const CLEANUP_INTERVAL = 30 * 60 * 1000; // 每 30 分鐘最多檢查一次自�
  * 條件：
  * 1. createdAt < 14 天前
  * 2. 發行女優不是喜愛女優（preferredActresses）
- * 3. 2 週內使用者未曾點進去瀏覽過（not in viewed_movies）
+ * 3. 使用者從未點進去瀏覽過（not in viewed_movies）
  * 4. 非收藏影片（not in favorites）
  * 5. 非使用者手動新增的影片（category !== '使用者新增'）
+ * 保護訊號（收藏 / 點擊 / 設定）讀取失敗時整次中止，不會當成「沒有保護」。
+ * 不直接刪：整列搬進回收桶（deleted_movies）保留 30 天，可從設定頁還原。
  */
 export async function cleanupStaleUnviewedMovies(force = false): Promise<number> {
   const now = Date.now();
@@ -154,7 +118,7 @@ export async function cleanupStaleUnviewedMovies(force = false): Promise<number>
       .from(movies)
       .where(lt(movies.createdAt, twoWeeksAgo));
 
-    const toDelete: string[] = [];
+    const toDelete: MovieRow[] = [];
     for (const m of oldMovies) {
       // 1. 已收藏的影片絕對保留
       if (favCodes.has(m.code)) continue;
@@ -173,7 +137,7 @@ export async function cleanupStaleUnviewedMovies(force = false): Promise<number>
       if (isFavActress) continue;
 
       // 符合自動清理條件
-      toDelete.push(m.code);
+      toDelete.push(m);
     }
 
     // 自動刪片不可逆，且仰賴收藏/瀏覽紀錄當保護傘：
@@ -182,23 +146,21 @@ export async function cleanupStaleUnviewedMovies(force = false): Promise<number>
     const decision = decideCleanup({
       totalMovies: Number(total),
       favoritesCount: favCodes.size,
+      viewedCount: viewedCodes.size,
       plannedDeletions: toDelete.length,
     });
     if (!decision.proceed) {
       console.warn(`[cleanup] 已中止：${decision.reason}`);
-      console.warn(`[cleanup] 原本要刪的番號：${toDelete.join(', ')}`);
+      console.warn(`[cleanup] 原本要刪的番號：${toDelete.map((m) => m.code).join(', ')}`);
       return 0;
     }
 
     if (toDelete.length > 0) {
-      console.log(`[cleanup] 即將移除 ${toDelete.length} 部：${toDelete.join(', ')}`);
-      const chunkSize = 100;
-      for (let i = 0; i < toDelete.length; i += chunkSize) {
-        const chunk = toDelete.slice(i, i + chunkSize);
-        await db.delete(movies).where(inArray(movies.code, chunk));
-      }
-      console.log(`[cleanup] 自動移除了 ${toDelete.length} 部超過兩週未點擊瀏覽的非喜愛女優影片`);
+      console.log(`[cleanup] 即將移入回收桶 ${toDelete.length} 部：${toDelete.map((m) => m.code).join(', ')}`);
+      await moveMoviesToTrash(toDelete, '入庫滿 14 天未點擊、未收藏、非喜愛女優');
+      console.log(`[cleanup] 已將 ${toDelete.length} 部移入回收桶（保留 30 天可還原）`);
     }
+    await purgeExpiredTrash(now);
     return toDelete.length;
   } catch (err) {
     console.warn('[cleanup] cleanupStaleUnviewedMovies failed:', err);

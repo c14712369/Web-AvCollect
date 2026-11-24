@@ -20,7 +20,8 @@
 
 | 規則 | 強制機制 |
 |---|---|
-| 讀取失敗不可回傳 `[]`／`{}`／`FALLBACK` 當預設值（2026-09-21 收藏洗空事故） | lint：`eslint.config.mjs` 的 `no-restricted-syntax`；測試：`src/lib/config.test.ts` |
+| 讀取失敗不可回傳 `[]`／`{}`／`new Set()`／`new Map()`／`FALLBACK` 當預設值（2026-09-21 收藏洗空事故；2026-11-24 點擊紀錄 `new Set()` 漏網） | lint：`eslint.config.mjs` 的 `no-restricted-syntax`；測試：`src/lib/config.test.ts`、`src/lib/db/cleanup.test.ts` |
+| 自動清理不直接刪片：先整列搬進回收桶 `deleted_movies`（保留 30 天可還原）；保護訊號（收藏／點擊）為空或讀取失敗就中止 | 架構：`src/lib/db/movie-trash.ts` 的 `moveMoviesToTrash`、`src/lib/cleanup-guard.ts`；AvBatch `getAllCodes` 把回收桶當黑名單；測試：`src/lib/db/cleanup.test.ts`、`src/lib/cleanup-guard.test.ts` |
 | 清單類寫入（收藏、設定）只送 add/remove，禁止前端推整份清單覆蓋 | 架構：`favoritesWriteSchema`／`configWriteSchema` 拒收裸陣列，差異工具在 `src/lib/config-patch.ts`；測試：`src/app/api/config/route.test.ts`、`src/lib/validators.test.ts` |
 | SSRF：圖片代理只放行白名單網域；`remotePatterns` 禁止萬用 `**` | 架構：唯一來源 `src/lib/image-proxy.ts` 的 `IMAGE_HOST_REFERERS`（新增圖床只改這裡）；測試：`src/lib/image-proxy.test.ts` |
 | 禁止小於 10px 的微型字體（主要資訊最低 `text-xs`） | lint：`no-restricted-syntax`（`text-[Npx]`，N<10） |

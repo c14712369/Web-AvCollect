@@ -6,6 +6,11 @@ export const addMovieSchema = z.object({
 
 export type AddMovieInput = z.infer<typeof addMovieSchema>;
 
+/** 從回收桶還原：一次只還原一部（單筆指令，不送整份清單）。 */
+export const restoreTrashSchema = z.object({
+  code: z.string().trim().min(1, '缺少番號'),
+});
+
 /**
  * 收藏寫入指令。
  * 單筆增刪（add/remove）供 UI toggle 使用；整份覆蓋（replace）只給匯入功能，

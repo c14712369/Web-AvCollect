@@ -8,12 +8,17 @@ const EMPTY_FALLBACK_MSG =
   '讀取失敗不可回傳空陣列/空物件/FALLBACK 當預設值（2026-09-21 收藏洗空事故：前端把它當「沒資料」，下一次寫入就洗掉真資料）。' +
   '請 throw，或回 5xx + { success: false }，讓呼叫端進 error 狀態。範例：src/lib/config.ts getConfig、src/app/api/favorites/route.ts GET。';
 const FALLBACK_NAME = '/FALLBACK|DEFAULT|EMPTY/';
+const EMPTY_COLLECTION = 'NewExpression[callee.name=/^(Set|Map)$/][arguments.length=0]';
 
 const emptyFallbackSelectors = [
   // try { ... } catch { return []; } / return {};
   'CatchClause ReturnStatement > ArrayExpression[elements.length=0]',
   'CatchClause ReturnStatement > ObjectExpression[properties.length=0]',
   `CatchClause ReturnStatement > Identifier[name=${FALLBACK_NAME}]`,
+  // catch { return new Set(); } / new Map()（2026-11-24 點擊紀錄讀取失敗 → 全部片失去「已瀏覽」保護）
+  `CatchClause ReturnStatement > ${EMPTY_COLLECTION}`,
+  `CallExpression[callee.property.name="catch"] > ArrowFunctionExpression > ${EMPTY_COLLECTION}`,
+  `CallExpression[callee.property.name="catch"] > :function ReturnStatement > ${EMPTY_COLLECTION}`,
   // catch 裡 NextResponse.json([], { status: 500 })（收藏事故原始寫法）
   'CatchClause CallExpression[callee.property.name="json"] > ArrayExpression[elements.length=0]',
   // promise.catch(() => []) / .catch(() => ({})) / .catch(() => FALLBACK)
