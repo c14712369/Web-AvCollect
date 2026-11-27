@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/client';
 import { upcomingMovies } from '@/lib/db/schema';
+import { getConfig } from '@/lib/config';
+import { extractMaker } from '@/lib/metadata';
 import { asc, eq, sql, lt, gte, or } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
@@ -16,20 +18,27 @@ export async function GET() {
       console.warn('[GET /api/upcoming] auto cleanup expired upcoming failed:', cleanupErr);
     }
 
-    const rows = await db
-      .select()
-      .from(upcomingMovies)
-      .where(
-        or(
-          gte(upcomingMovies.releaseDate, today),
-          sql`${upcomingMovies.releaseDate} is null`
+    const [, rows] = await Promise.all([
+      getConfig(),
+      db
+        .select()
+        .from(upcomingMovies)
+        .where(
+          or(
+            gte(upcomingMovies.releaseDate, today),
+            sql`${upcomingMovies.releaseDate} is null`
+          )
         )
-      )
-      .orderBy(
-        sql`case when ${upcomingMovies.releaseDate} is null then 1 else 0 end`,
-        asc(upcomingMovies.releaseDate)
-      );
-    return NextResponse.json({ success: true, movies: rows });
+        .orderBy(
+          sql`case when ${upcomingMovies.releaseDate} is null then 1 else 0 end`,
+          asc(upcomingMovies.releaseDate)
+        ),
+    ]);
+    const moviesWithMaker = rows.map((row) => ({
+      ...row,
+      maker: extractMaker(row.code),
+    }));
+    return NextResponse.json({ success: true, movies: moviesWithMaker });
   } catch (error) {
     console.error('[GET /api/upcoming]', error);
     return NextResponse.json(

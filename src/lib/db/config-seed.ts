@@ -7,7 +7,7 @@ const TRACKED_TAGS = ['校服', '白襪', '接吻', '3P', '女同', '百合', '�
 
 const MAKER_MAP: Record<string, string> = {
   // S1
-  SNOS: 'S1', SSIS: 'S1', SONE: 'S1', SOE: 'S1', SORA: 'S1', SIVR: 'S1',
+  SNOS: 'S1', SSIS: 'S1', SSNI: 'S1', SONE: 'S1', SOE: 'S1', SORA: 'S1', SIVR: 'S1',
   // IDEAPOCKET
   IPZZ: 'IDEAPOCKET', IPX: 'IDEAPOCKET', IPVR: 'IDEAPOCKET', IPTD: 'IDEAPOCKET',
   JUFE: 'IDEAPOCKET', SUPA: 'IDEAPOCKET',
@@ -15,10 +15,11 @@ const MAKER_MAP: Record<string, string> = {
   MIDA: 'MOODYZ', MIMK: 'MOODYZ', MIAA: 'MOODYZ', MIHD: 'MOODYZ',
   MIDE: 'MOODYZ', MIAE: 'MOODYZ', MIDV: 'MOODYZ', MIDD: 'MOODYZ',
   MIGD: 'MOODYZ', MIND: 'MOODYZ', MIAD: 'MOODYZ', MDYD: 'MOODYZ',
+  MIKR: 'MOODYZ', MIRD: 'MOODYZ', MIAB: 'MOODYZ', MIFD: 'MOODYZ', MIZD: 'MOODYZ',
   // PREMIUM
   PRED: 'PREMIUM', PRWF: 'PREMIUM',
   // DAS
-  DASS: 'DAS', DLDSS: 'DAS', DCDSS: 'DAS', DLVSS: 'DAS',
+  DASS: 'DAS', DLDSS: 'DAS', DCDSS: 'DAS', DLVSS: 'DAS', DSOD: 'DAS',
   // FALENO
   FNS: 'FALENO', FALO: 'FALENO', FSDSS: 'FALENO', FSVSS: 'FALENO', DSAM: 'FALENO',
   // E-BODY
@@ -26,36 +27,59 @@ const MAKER_MAP: Record<string, string> = {
   // SOD
   STARS: 'SOD', START: 'SOD', STAR: 'SOD',
   SDMM: 'SOD', SDJS: 'SOD', SDAB: 'SOD', SDDE: 'SOD',
-  SDNM: 'SOD', SDMU: 'SOD', SDAM: 'SOD',
+  SDNM: 'SOD', SDMU: 'SOD', SDAM: 'SOD', SDMF: 'SOD',
   // MADONNA
-  JUL: 'Madonna', JUR: 'Madonna', JUKD: 'Madonna',
+  JUL: 'Madonna', JUR: 'Madonna', JUKD: 'Madonna', JUQ: 'Madonna', ACHJ: 'Madonna',
   // KMP
-  MKMP: 'KMP',
+  MKMP: 'KMP', REAL: 'KMP',
   // CAWAII
-  CAWD: 'CAWAII', KAWD: 'CAWAII',
+  CAWD: 'CAWAII', KAWD: 'CAWAII', CAWB: 'CAWAII', KWBD: 'CAWAII',
   // ABBA
   ABF: 'ABBA',
   // Attackers
-  ATID: 'Attackers', SHKD: 'Attackers',
+  ATID: 'Attackers', SHKD: 'Attackers', ADN: 'Attackers', SAME: 'Attackers',
+  YUJ: 'Attackers', JBD: 'Attackers', RBK: 'Attackers',
   // Prestige
   ABW: 'Prestige', ABP: 'Prestige', MAAN: 'Prestige', MKCK: 'Prestige',
   MBW: 'Prestige', PPT: 'Prestige', OFJE: 'Prestige',
   // Wanz
   WANZ: 'Wanz Factory', WAAA: 'Wanz Factory',
   // Honnaka
-  HMN: 'Honnaka',
+  HMN: 'Honnaka', HNDB: 'Honnaka', HNVR: 'Honnaka',
   // Alice Japan
-  AILB: 'Alice Japan',
+  AILB: 'Alice Japan', DVAJ: 'Alice Japan',
   // S-Cute
-  SMCD: 'S-Cute',
+  SMCD: 'S-Cute', SQTE: 'S-Cute',
   // Maxing
-  MAXA: 'Maxing',
+  MAXA: 'Maxing', MXGS: 'Maxing',
   // Moon Force
   MOON: 'Moon Force',
   // MINGOs
   MNGS: 'MINGOs',
   // FC2
   FC2: 'FC2 PPV',
+  // 其他主流片商（經核對補充）
+  ROYD: 'ROYAL',
+  CJOD: '痴女ヘブン',
+  HUNTC: 'Hunter',
+  PPPE: 'OPPAI',
+  BBAN: 'BIBIAN',
+  FPRE: 'Fitch',
+  MEYD: '溜池ゴロー', MFYD: '溜池ゴロー',
+  MUKD: '無垢', MUKC: '無垢', MUDR: '無垢',
+  DVEH: "DEEP'S",
+  XVSR: 'MAX-A',
+  RKI: 'ROOKIE',
+  MVSD: "M's Video Group",
+  BF: 'BeFree',
+  GVH: 'Glory Quest',
+  HODV: 'h.m.p', HOMA: 'h.m.p',
+  IENF: 'IENERGY',
+  VEMA: 'VENUS',
+  DOKS: "OFFICE K'S",
+  CEMD: 'セレブの友',
+  EKDV: 'Crystal Eizo',
+  REBD: 'REbecca',
 };
 
 const PREFERRED_ISSUERS = [

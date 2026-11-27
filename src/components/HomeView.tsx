@@ -183,7 +183,7 @@ export function HomeView({ initialMovies }: HomeViewProps) {
           source: m.source,
           category: '預售新片',
           releaseDate: m.releaseDate ?? null,
-          maker: '',
+          maker: m.maker ?? '',
           themes: [],
           actress: m.actress,
           addedAt: toIsoTimestamp(m.createdAt),

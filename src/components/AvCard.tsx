@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Heart, ImageOff, Target, Trash2 } from 'lucide-react';
 import { Movie } from '@/types/av';
-import { upgradeImageUrl } from '@/lib/utils';
+import { stripLeadingMovieCode, upgradeImageUrl } from '@/lib/utils';
 
 interface AvCardProps {
   movie: Movie;
@@ -195,29 +195,27 @@ export const AvCard: React.FC<AvCardProps> = ({ movie, favorited, onToggleFavori
 
       {/* Content Area */}
       <div className="flex flex-col gap-1.5 p-3">
-        {/* 預售新片：顯示番號與預計發售日 */}
-        {movie.category === '預售新片' && (
-          <div className="flex items-center gap-2">
-            <span className="inline-flex rounded bg-indigo-500/20 px-1.5 py-0.5 text-xs font-black tracking-tighter text-indigo-300 border border-indigo-500/30">
-              {movie.code}
+        {/* 番號列（所有卡片一致顯示）；預售新片右側補上發售日 */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="inline-flex items-center rounded bg-indigo-500/20 px-1.5 py-0.5 font-mono text-xs font-bold leading-none tracking-tight text-indigo-300 border border-indigo-500/30">
+            {movie.code}
+          </span>
+          {movie.category === '預售新片' && movie.releaseDate && (
+            <span className="truncate text-xs font-semibold leading-none text-white/40">
+              {movie.releaseDate} 發售
             </span>
-            {movie.releaseDate && (
-              <span className="text-xs font-semibold text-white/40">{movie.releaseDate} 發售</span>
-            )}
-          </div>
-        )}
+          )}
+        </div>
         <h3 className="line-clamp-2 min-h-[2.75em] text-sm font-semibold leading-snug text-white/90 group-hover:text-white transition-colors" title={movie.title}>
-          {movie.title}
+          {stripLeadingMovieCode(movie.title, movie.code)}
         </h3>
-        {(movie.actress || movie.themes.length > 0) && (
-          <p className="truncate text-xs text-white/45">
-            {movie.actress && <span className="text-rose-300/80">{movie.actress}</span>}
-            {movie.actress && movie.themes.length > 0 && (
-              <span className="mx-1.5 text-white/20">|</span>
-            )}
-            {movie.themes.slice(0, 3).join('・')}
-          </p>
-        )}
+        <p className="min-h-[1.25em] truncate text-xs leading-tight text-white/45">
+          {movie.actress && <span className="text-rose-300/80">{movie.actress}</span>}
+          {movie.actress && movie.maker && (
+            <span className="mx-1.5 text-white/20">|</span>
+          )}
+          {movie.maker}
+        </p>
       </div>
     </div>
   );

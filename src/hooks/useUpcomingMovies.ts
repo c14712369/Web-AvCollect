@@ -3,9 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UpcomingMovieRow } from '@/lib/db/schema';
 
+export type UpcomingMovieItem = UpcomingMovieRow & { maker?: string };
+
 const QUERY_KEY = ['upcoming-movies'] as const;
 
-const fetchUpcoming = async (): Promise<UpcomingMovieRow[]> => {
+const fetchUpcoming = async (): Promise<UpcomingMovieItem[]> => {
   const res = await fetch('/api/upcoming');
   if (!res.ok) throw new Error('Failed to load upcoming movies');
   const json = await res.json();
@@ -32,7 +34,7 @@ export const useDeleteUpcomingMovie = () => {
   return useMutation({
     mutationFn: deleteUpcomingApi,
     onSuccess: (_, code) => {
-      queryClient.setQueryData<UpcomingMovieRow[]>(QUERY_KEY, (prev) =>
+      queryClient.setQueryData<UpcomingMovieItem[]>(QUERY_KEY, (prev) =>
         prev ? prev.filter((m) => m.code !== code) : []
       );
     },
