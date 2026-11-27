@@ -13,6 +13,8 @@ export const IMAGE_HOST_REFERERS = {
   'avking.xyz': 'https://javrate.com/',
   'supjav.com': 'https://supjav.com/',
   'javrate.com': 'https://javrate.com/',
+  'cdn.up-timely.com': 'https://kawaiikawaii.jp/',
+  'www.sod.co.jp': 'https://www.sod.co.jp/',
 } as const satisfies Record<string, string>;
 
 type ImageHost = keyof typeof IMAGE_HOST_REFERERS;

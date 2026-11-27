@@ -10,6 +10,8 @@ test('fourhoi 封面使用 MissAV AI Referer，避免防盜連 403', () => {
 test('圖片代理只放行白名單網域與其子網域', () => {
   assert.equal(isAllowedImageHost('fourhoi.com'), true);
   assert.equal(isAllowedImageHost('img.cdn.jable.tv'), true);
+  assert.equal(isAllowedImageHost('cdn.up-timely.com'), true);
+  assert.equal(isAllowedImageHost('www.sod.co.jp'), true);
   assert.equal(isAllowedImageHost('169.254.169.254'), false);
   assert.equal(isAllowedImageHost('localhost'), false);
   assert.equal(isAllowedImageHost('jable.tv.evil.com'), false);
@@ -32,4 +34,6 @@ test('每個白名單網域都有對應 Referer', () => {
   assert.equal(getImageReferer(new URL('https://img.avking.xyz/x.jpg')), 'https://javrate.com/');
   assert.equal(getImageReferer(new URL('https://supjav.com/x.jpg')), 'https://supjav.com/');
   assert.equal(getImageReferer(new URL('https://eightcdn.com/x.jpg')), 'https://missav.com/');
+  assert.equal(getImageReferer(new URL('https://cdn.up-timely.com/image/32/content/1/a.jpg')), 'https://kawaiikawaii.jp/');
+  assert.equal(getImageReferer(new URL('https://www.sod.co.jp/django-media/a.webp')), 'https://www.sod.co.jp/');
 });
