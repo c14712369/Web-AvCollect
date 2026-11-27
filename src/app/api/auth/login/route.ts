@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { AUTH_COOKIE, expectedSessionHash, timingSafeEqual } from '@/lib/auth';
+import {
+  AUTH_COOKIE,
+  expectedSessionHash,
+  getAuthCookieOptions,
+  timingSafeEqual,
+} from '@/lib/auth';
 
 const loginSchema = z.object({
   password: z.string().min(1),
@@ -34,13 +39,7 @@ export async function POST(req: Request) {
 
     const sessionHash = await expectedSessionHash(secret);
     const res = NextResponse.json({ success: true });
-    res.cookies.set(AUTH_COOKIE, sessionHash, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 30,
-    });
+    res.cookies.set(AUTH_COOKIE, sessionHash, getAuthCookieOptions());
     return res;
   } catch (error) {
     console.error('[POST /api/auth/login]', error);

@@ -1,5 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { AUTH_COOKIE, isValidSession } from '@/lib/auth';
+import {
+  AUTH_COOKIE,
+  getAuthCookieOptions,
+  isValidSession,
+  shouldRefreshSessionCookie,
+} from '@/lib/auth';
 
 const PUBLIC_PATHS = ['/login', '/api/auth/login'];
 
@@ -27,7 +32,13 @@ export async function middleware(req: NextRequest) {
   const cookieValue = req.cookies.get(AUTH_COOKIE)?.value;
   const valid = await isValidSession(cookieValue, secret);
 
-  if (valid) return NextResponse.next();
+  if (valid && cookieValue) {
+    const res = NextResponse.next();
+    if (shouldRefreshSessionCookie(pathname)) {
+      res.cookies.set(AUTH_COOKIE, cookieValue, getAuthCookieOptions());
+    }
+    return res;
+  }
 
   if (pathname.startsWith('/api/')) {
     return NextResponse.json(
